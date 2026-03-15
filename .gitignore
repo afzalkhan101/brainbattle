@@ -1,0 +1,76 @@
+# ===============================
+# Python / Django
+# ===============================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.log
+*.pot
+
+db.sqlite3
+*.sqlite3
+
+# Django stuff
+*.mo
+*.pyc
+media/
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.*
+
+# Django static files
+staticfiles/
+
+# ===============================
+# Node / React
+# ===============================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+build/
+dist/
+
+# React environment
+frontend/.env
+
+# ===============================
+# OS Files
+# ===============================
+
+.DS_Store
+Thumbs.db
+
+# ===============================
+# IDE / Editor
+# ===============================
+
+.vscode/
+.idea/
+
+# ===============================
+# Testing
+# ===============================
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ===============================
+# Docker
+# ===============================
+
+*.pid
+*.seed
+*.pid.lock
