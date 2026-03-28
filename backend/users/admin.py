@@ -4,8 +4,6 @@ from django.utils.html import format_html
 from .models import User, Wallet, WalletTransaction
 
 
-# ── User Admin ────────────────────────────────────────────────────────────────
-
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display  = (
@@ -63,8 +61,6 @@ class UserAdmin(BaseUserAdmin):
         return "No image"
     profile_image_preview.short_description = "Preview"
 
-
-# ── Wallet Admin ──────────────────────────────────────────────────────────────
 
 class WalletTransactionInline(admin.TabularInline):
     model          = WalletTransaction
