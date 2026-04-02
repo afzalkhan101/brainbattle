@@ -11,6 +11,7 @@ class Quiz(models.Model):
         null=True,
         related_name='quizzes',
     )
+    
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
