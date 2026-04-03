@@ -11,7 +11,7 @@ class Quiz(models.Model):
         null=True,
         related_name='quizzes',
     )
-    
+
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -25,15 +25,27 @@ class Quiz(models.Model):
 
 
 class Question(models.Model):
+    DIFFICULTY_CHOICES = (
+        ('simple', 'Simple'),
+        ('mid', 'Medium'),
+        ('hard', 'Hard'),
+    )
+
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     question_text = models.TextField()
     order = models.PositiveIntegerField(default=0)
+
+    difficulty = models.CharField(
+        max_length=10,
+        choices=DIFFICULTY_CHOICES,
+        default='simple'
+    )
 
     class Meta:
         ordering = ['order', 'id']
 
     def __str__(self):
-        return self.question_text[:80]
+        return f"{self.question_text[:50]} ({self.difficulty})"
 
 
 class Answer(models.Model):
@@ -46,20 +58,23 @@ class Answer(models.Model):
 
 
 class QuizAttempt(models.Model):
-    """Tracks a user's submission for a quiz."""
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='quiz_attempts',
     )
-    score = models.FloatField(default=0.0)          # percentage 0–100
+
+    score = models.FloatField(default=0.0)         # obtained marks
+    total_marks = models.FloatField(default=0.0)   # full marks
+
     total_questions = models.PositiveIntegerField(default=0)
     correct_answers = models.PositiveIntegerField(default=0)
+
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-submitted_at']
 
     def __str__(self):
-        return f'{self.user} — {self.quiz} ({self.score:.1f}%)'
+        return f'{self.user} — {self.quiz} ({self.score}/{self.total_marks})'

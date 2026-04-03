@@ -3,8 +3,8 @@ from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
-from .models import Quiz, Question, Answer, QuizAttempt
 
+from .models import Quiz, Question, Answer, QuizAttempt
 from .serializers import (
     QuizListSerializer,
     QuizDetailSerializer,
@@ -15,7 +15,6 @@ from .serializers import (
 
 
 class IsTeacherOrAdmin(IsAuthenticated):
-    """Allow teachers and admins to modify quizzes."""
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
             return False
@@ -23,10 +22,6 @@ class IsTeacherOrAdmin(IsAuthenticated):
 
 
 class QuizListCreateView(generics.ListCreateAPIView):
-    """
-    GET  /api/quizzes/   - list published quizzes (search + ordering)
-    POST /api/quizzes/   - create quiz (teacher/admin only)
-    """
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title']
@@ -34,10 +29,8 @@ class QuizListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         qs = Quiz.objects.annotate(question_count=Count('questions'))
         user = self.request.user
-        # Staff/teachers see all; others see published only
-        if hasattr(user, 'role') and user.role in ('teacher', 'admin') or (
-            hasattr(user, 'is_staff') and user.is_staff
-        ):
+
+        if hasattr(user, 'role') and user.role in ('teacher', 'admin') or user.is_staff:
             return qs
         return qs.filter(is_published=True)
 
@@ -53,16 +46,13 @@ class QuizListCreateView(generics.ListCreateAPIView):
 
 
 class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET    /api/quizzes/<id>/   - full quiz with questions
-    PUT    /api/quizzes/<id>/   - update (teacher/admin)
-    PATCH  /api/quizzes/<id>/   - partial update
-    DELETE /api/quizzes/<id>/   - delete (admin only)
-    """
+
     def get_queryset(self):
-        # Eager-load questions → answers to avoid N+1
         return Quiz.objects.prefetch_related(
-            Prefetch('questions', queryset=Question.objects.prefetch_related('answers').order_by('order', 'id'))
+            Prefetch(
+                'questions',
+                queryset=Question.objects.prefetch_related('answers').order_by('order', 'id')
+            )
         )
 
     def get_serializer_class(self):
@@ -78,12 +68,8 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
         return [IsAuthenticatedOrReadOnly()]
 
 
+# 🔥 FINAL SUBMIT LOGIC (Marks-based)
 class QuizSubmitView(APIView):
-    """
-    POST /api/quizzes/<id>/submit/
-    Body: { "answers": [{"question_id": 1, "answer_id": 3}, ...] }
-    Returns: score, correct count, total questions
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -102,32 +88,43 @@ class QuizSubmitView(APIView):
             for item in serializer.validated_data['answers']
         }
 
-        # Build a lookup: question_id → correct answer_id(s)
-        correct_map = {}
+        total_marks = 0
+        obtained_marks = 0
+        correct_count = 0
+
         for question in quiz.questions.all():
-            correct_map[question.id] = {
+            correct_ids = {
                 ans.id for ans in question.answers.all() if ans.is_correct
             }
 
-        total = len(correct_map)
-        correct = sum(
-            1 for q_id, correct_ids in correct_map.items()
-            if submitted.get(q_id) in correct_ids
-        )
-        score = round((correct / total * 100) if total else 0, 2)
+            # 🎯 Difficulty-based marks
+            if question.difficulty == 'hard':
+                question_mark = 3
+            elif question.difficulty == 'mid':
+                question_mark = 2
+            else:
+                question_mark = 1
+
+            total_marks += question_mark
+
+            # ✅ Answer check
+            if submitted.get(question.id) in correct_ids:
+                obtained_marks += question_mark
+                correct_count += 1
 
         attempt = QuizAttempt.objects.create(
             quiz=quiz,
             user=request.user,
-            score=score,
-            total_questions=total,
-            correct_answers=correct,
+            score=obtained_marks,
+            total_marks=total_marks,
+            total_questions=quiz.questions.count(),
+            correct_answers=correct_count,
         )
+
         return Response(QuizAttemptSerializer(attempt).data, status=status.HTTP_201_CREATED)
 
 
 class MyAttemptsView(generics.ListAPIView):
-    """GET /api/quizzes/my-attempts/ — current user's history"""
     serializer_class = QuizAttemptSerializer
     permission_classes = [IsAuthenticated]
 
