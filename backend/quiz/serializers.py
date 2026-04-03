@@ -94,14 +94,17 @@ class QuizSubmitSerializer(serializers.Serializer):
 class QuizAttemptSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
-
+    total_submitted = serializers.SerializerMethodField()
     class Meta:
         model = QuizAttempt
         fields = [
             'id', 'quiz_title', 'user_email',
             'score', 'total_marks', 'total_questions',
-            'correct_answers', 'submitted_at',
+            'correct_answers', 'submitted_at', 'total_submitted',
         ]
+
+    def get_total_submitted(self, obj):
+        return obj.attempt_answers.count()
 
 
 # ─── Attempt Detail (per-question breakdown) ──────────────────────────────────

@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const DIFFICULTY_TIME = { easy: 10, mid: 15, hard: 20 }
 const DIFFICULTY_LABEL = { easy: 'Easy', mid: 'Medium', hard: 'Hard' }
 const DIFFICULTY_COLOR = {
@@ -16,7 +15,6 @@ const DIFFICULTY_COLOR = {
   hard: 'bg-red-50 text-red-600 border-red-200',
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 const getTimeLimit = (difficulty) => DIFFICULTY_TIME[difficulty] ?? 15
 
 const DifficultyBadge = ({ level }) => (
@@ -25,7 +23,6 @@ const DifficultyBadge = ({ level }) => (
   </span>
 )
 
-// ─── Circular Timer Ring ─────────────────────────────────────────────────────
 const TimerRing = ({ timeLeft, total, danger }) => {
   const radius = 22
   const circumference = 2 * Math.PI * radius
@@ -52,36 +49,32 @@ const TimerRing = ({ timeLeft, total, danger }) => {
   )
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
 export default function QuizDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [quiz, setQuiz]             = useState(null)
-  const [loading, setLoading]       = useState(true)
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [answers, setAnswers]       = useState({})      // { qId: aId | null }
-  const [timeLeft, setTimeLeft]     = useState(null)
-  const [lockedQs, setLockedQs]     = useState(new Set())
-  const [result, setResult]         = useState(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [quiz, setQuiz]               = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [currentIdx, setCurrentIdx]   = useState(0)
+  const [answers, setAnswers]         = useState({})
+  const [timeLeft, setTimeLeft]       = useState(null)
+  const [lockedQs, setLockedQs]       = useState(new Set())
+  const [result, setResult]           = useState(null)
+  const [submitting, setSubmitting]   = useState(false)
   const [showExpired, setShowExpired] = useState(false)
-
   const timerRef = useRef(null)
 
-  // ── Fetch Quiz ──
   useEffect(() => {
     api.get(`/api/quizzes/${id}/`)
       .then(({ data }) => { setQuiz(data); setLoading(false) })
       .catch(() => { toast.error('Quiz not found'); navigate('/quizzes') })
   }, [id])
 
-  const questions  = quiz?.questions ?? []
-  const currentQ   = questions[currentIdx]
-  const isLastQ    = currentIdx === questions.length - 1
-  const totalQ     = questions.length
+  const questions = quiz?.questions ?? []
+  const currentQ  = questions[currentIdx]
+  const isLastQ   = currentIdx === questions.length - 1
+  const totalQ    = questions.length
 
-  // ── Start per-question timer ──
   const startTimer = useCallback((question) => {
     clearInterval(timerRef.current)
     const limit = getTimeLimit(question?.difficulty)
@@ -112,13 +105,11 @@ export default function QuizDetail() {
     if (result) clearInterval(timerRef.current)
   }, [result])
 
-  // ── Select answer ──
   const select = (qId, aId) => {
     if (result || lockedQs.has(qId)) return
     setAnswers((prev) => ({ ...prev, [qId]: aId }))
   }
 
-  // ── Next question ──
   const handleNext = () => {
     if (answers[currentQ.id] === undefined) {
       setAnswers((prev) => ({ ...prev, [currentQ.id]: null }))
@@ -128,7 +119,6 @@ export default function QuizDetail() {
     setCurrentIdx((i) => i + 1)
   }
 
-  // ── Submit ──
   const handleSubmit = async () => {
     setSubmitting(true)
     clearInterval(timerRef.current)
@@ -151,43 +141,49 @@ export default function QuizDetail() {
     }
   }
 
-  // ─── Loading ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="flex justify-center py-20">
       <div className="w-7 h-7 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
-  // ─── Result Screen ────────────────────────────────────────────────────────────
   if (result) return (
     <div className="max-w-2xl mx-auto">
       <div className={`rounded-2xl p-6 mb-6 border ${
-        result.score >= 60 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+        result.attempt.score >= 60 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
       }`}>
         <div className="flex items-center gap-3 mb-3">
-          {result.score >= 60
+          {result.attempt.score >= 60
             ? <CheckCircle2 size={28} className="text-emerald-500" />
             : <XCircle size={28} className="text-red-500" />}
           <div>
             <p className="font-bold text-lg text-slate-900">
-              {result.score >= 60 ? 'Great job!' : 'Keep practicing!'}
+              {result.attempt.score >= 60 ? 'Great job!' : 'Keep practicing!'}
             </p>
             <p className="text-sm text-slate-600">Quiz submitted successfully</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+
+        <div className="flex items-center justify-around bg-white rounded-xl border border-slate-100 px-6 py-4 mt-4">
           {[
-            { label: 'Score',   value: result.score,            color: 'text-slate-900'   },
-            { label: 'Correct', value: result.correct_answers,  color: 'text-emerald-600' },
-            { label: 'Total',   value: result.total_questions,  color: 'text-slate-900'   },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-xl p-3 text-center border border-white/50">
-              <p className={`text-2xl font-bold ${color}`}>{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+            { label: 'Score',     value: result.attempt.score,           color: 'text-slate-900'   },
+            { label: 'Correct',   value: result.attempt.correct_answers, color: 'text-emerald-600' },
+            { label: 'Total',     value: result.attempt.total_questions, color: 'text-slate-900'   },
+            { label: 'Submitted', value: result.attempt.total_submitted, color: 'text-slate-900'   },
+          ].map(({ label, value, color }, i, arr) => (
+            <div key={label} className="flex items-center">
+              <div className="flex flex-col items-center gap-0.5 px-4">
+                <span className={`text-2xl font-bold tabular-nums ${color}`}>{value}</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-400">{label}</span>
+              </div>
+              {i < arr.length - 1 && (
+                <div className="w-px h-8 bg-slate-100 shrink-0" />
+              )}
             </div>
           ))}
         </div>
       </div>
+
       <div className="flex gap-3 justify-center">
         <button onClick={() => navigate('/quizzes')} className="btn-secondary">Browse More Quizzes</button>
         <button onClick={() => navigate('/my-attempts')} className="btn-primary">View All Attempts</button>
@@ -195,7 +191,6 @@ export default function QuizDetail() {
     </div>
   )
 
-  // ─── Quiz Screen ──────────────────────────────────────────────────────────────
   const timeLimit = getTimeLimit(currentQ?.difficulty)
   const isDanger  = timeLeft !== null && timeLeft <= 5
   const progress  = totalQ > 0 ? ((currentIdx + 1) / totalQ) * 100 : 0
@@ -203,7 +198,6 @@ export default function QuizDetail() {
   return (
     <div className="max-w-2xl mx-auto">
 
-      {/* Back */}
       <button
         onClick={() => navigate('/quizzes')}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors"
@@ -211,7 +205,6 @@ export default function QuizDetail() {
         <ArrowLeft size={15} /> Back to Quizzes
       </button>
 
-      {/* Quiz Header */}
       <div className="card mb-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
@@ -222,7 +215,6 @@ export default function QuizDetail() {
             {quiz.description && <p className="text-sm text-slate-500 mt-1">{quiz.description}</p>}
           </div>
         </div>
-        {/* Overall progress bar */}
         <div className="mt-4">
           <div className="flex justify-between text-xs text-slate-500 mb-1.5">
             <span>Question {currentIdx + 1} of {totalQ}</span>
@@ -237,11 +229,8 @@ export default function QuizDetail() {
         </div>
       </div>
 
-      {/* Question Card */}
       {currentQ && (
         <div className="card">
-
-          {/* Question header */}
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
@@ -254,13 +243,11 @@ export default function QuizDetail() {
                 {currentQ.question_text}
               </p>
             </div>
-            {/* Circular countdown */}
             {timeLeft !== null && (
               <TimerRing timeLeft={timeLeft} total={timeLimit} danger={isDanger} />
             )}
           </div>
 
-          {/* Time hint */}
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-4">
             <Clock size={12} />
             <span>
@@ -268,7 +255,6 @@ export default function QuizDetail() {
             </span>
           </div>
 
-          {/* Expired banner */}
           {showExpired && lockedQs.has(currentQ.id) && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-red-600">
               <AlertCircle size={15} />
@@ -276,7 +262,6 @@ export default function QuizDetail() {
             </div>
           )}
 
-          {/* Options */}
           <div className="space-y-2">
             {currentQ.answers?.map((a) => {
               const selected = answers[currentQ.id] === a.id
@@ -300,7 +285,6 @@ export default function QuizDetail() {
             })}
           </div>
 
-          {/* Navigation */}
           <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
             {isLastQ ? (
               <button
@@ -321,7 +305,6 @@ export default function QuizDetail() {
         </div>
       )}
 
-      {/* Question dot indicators */}
       <div className="flex items-center justify-center gap-1.5 mt-5 flex-wrap">
         {questions.map((q, i) => {
           const isAnswered = answers[q.id] !== undefined
@@ -332,10 +315,10 @@ export default function QuizDetail() {
               key={q.id}
               title={`Q${i + 1}: ${isSkipped ? 'Skipped' : isAnswered ? 'Answered' : 'Pending'}`}
               className={`rounded-full transition-all duration-300 ${
-                isCurrent   ? 'w-5 h-2.5 bg-primary-500'  :
-                isSkipped   ? 'w-2.5 h-2.5 bg-red-300'    :
-                isAnswered  ? 'w-2.5 h-2.5 bg-emerald-400':
-                              'w-2.5 h-2.5 bg-slate-200'
+                isCurrent  ? 'w-5 h-2.5 bg-primary-500'   :
+                isSkipped  ? 'w-2.5 h-2.5 bg-red-300'     :
+                isAnswered ? 'w-2.5 h-2.5 bg-emerald-400' :
+                             'w-2.5 h-2.5 bg-slate-200'
               }`}
             />
           )
