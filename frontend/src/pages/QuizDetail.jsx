@@ -81,7 +81,7 @@ export default function QuizDetail() {
           </div>
           <div className="grid grid-cols-3 gap-4 mt-4">
             <div className="bg-white rounded-xl p-3 text-center border border-white/50">
-              <p className="text-2xl font-bold text-slate-900">{result.score}%</p>
+              <p className="text-2xl font-bold text-slate-900">{result.score}</p>
               <p className="text-xs text-slate-500">Score</p>
             </div>
             <div className="bg-white rounded-xl p-3 text-center border border-white/50">
