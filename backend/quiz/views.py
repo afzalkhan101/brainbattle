@@ -4,13 +4,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 
-from .models import Quiz, Question, Answer, QuizAttempt
+from .models import Quiz, Question, Answer, QuizAttempt, AttemptAnswer
 from .serializers import (
     QuizListSerializer,
     QuizDetailSerializer,
     QuizCreateUpdateSerializer,
     QuizSubmitSerializer,
     QuizAttemptSerializer,
+    QuizAttemptDetailSerializer,
 )
 
 
@@ -22,14 +23,13 @@ class IsTeacherOrAdmin(IsAuthenticated):
 
 
 class QuizListCreateView(generics.ListCreateAPIView):
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'title']
+    filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields    = ['title', 'description']
+    ordering_fields  = ['created_at', 'title']
 
     def get_queryset(self):
-        qs = Quiz.objects.annotate(question_count=Count('questions'))
+        qs   = Quiz.objects.annotate(question_count=Count('questions'))
         user = self.request.user
-
         if hasattr(user, 'role') and user.role in ('teacher', 'admin') or user.is_staff:
             return qs
         return qs.filter(is_published=True)
@@ -68,7 +68,6 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
         return [IsAuthenticatedOrReadOnly()]
 
 
-# 🔥 FINAL SUBMIT LOGIC (Marks-based)
 class QuizSubmitView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -83,52 +82,91 @@ class QuizSubmitView(APIView):
         serializer = QuizSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        # Build submitted map — skip null answers (timed-out questions)
         submitted = {
             item['question_id']: item['answer_id']
-            for item in serializer.validated_data['answers']
+            for item in serializer.validated_data.get('answers', [])
+            if item.get('answer_id') is not None
         }
 
-        total_marks = 0
+        total_marks    = 0
         obtained_marks = 0
-        correct_count = 0
+        correct_count  = 0
+        answer_records = []
 
         for question in quiz.questions.all():
-            correct_ids = {
-                ans.id for ans in question.answers.all() if ans.is_correct
-            }
+            correct_ids = {ans.id for ans in question.answers.all() if ans.is_correct}
 
-            # 🎯 Difficulty-based marks
+            # Difficulty-based marks (model uses 'simple' / 'mid' / 'hard')
             if question.difficulty == 'hard':
                 question_mark = 3
             elif question.difficulty == 'mid':
                 question_mark = 2
-            else:
+            else:                          # 'simple'
                 question_mark = 1
 
             total_marks += question_mark
 
-            # ✅ Answer check
-            if submitted.get(question.id) in correct_ids:
+            selected_id = submitted.get(question.id)
+            is_correct  = bool(selected_id and selected_id in correct_ids)
+            earned      = question_mark if is_correct else 0
+
+            if is_correct:
                 obtained_marks += question_mark
-                correct_count += 1
+                correct_count  += 1
+
+            answer_records.append(
+                AttemptAnswer(
+                    question        = question,
+                    selected_answer = Answer.objects.filter(pk=selected_id).first() if selected_id else None,
+                    is_correct      = is_correct,
+                    marks_obtained  = earned,
+                    marks_possible  = question_mark,
+                )
+            )
 
         attempt = QuizAttempt.objects.create(
-            quiz=quiz,
-            user=request.user,
-            score=obtained_marks,
-            total_marks=total_marks,
-            total_questions=quiz.questions.count(),
-            correct_answers=correct_count,
+            quiz            = quiz,
+            user            = request.user,
+            score           = obtained_marks,
+            total_marks     = total_marks,
+            total_questions = quiz.questions.count(),
+            correct_answers = correct_count,
         )
+
+        # Attach attempt FK and bulk insert — single DB hit
+        for rec in answer_records:
+            rec.attempt = attempt
+        AttemptAnswer.objects.bulk_create(answer_records)
 
         return Response(QuizAttemptSerializer(attempt).data, status=status.HTTP_201_CREATED)
 
 
 class MyAttemptsView(generics.ListAPIView):
-    serializer_class = QuizAttemptSerializer
+    serializer_class   = QuizAttemptSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return QuizAttempt.objects.filter(
             user=self.request.user
         ).select_related('quiz', 'user')
+
+
+class AttemptDetailView(generics.RetrieveAPIView):
+    """Returns full per-question breakdown for a single attempt."""
+    serializer_class   = QuizAttemptDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return QuizAttempt.objects.filter(
+            user=self.request.user          # users can only see their own attempts
+        ).prefetch_related(
+            Prefetch(
+                'attempt_answers',
+                queryset=AttemptAnswer.objects.select_related(
+                    'question', 'selected_answer'
+                ).prefetch_related(
+                    'question__answers'     # needed for correct_text lookup
+                ).order_by('question__order', 'question__id')
+            )
+        ).select_related('quiz')

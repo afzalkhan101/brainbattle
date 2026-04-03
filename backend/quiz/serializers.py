@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Quiz, Question, Answer, QuizAttempt
+from .models import Quiz, Question, Answer, QuizAttempt, AttemptAnswer
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -20,7 +20,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['id', 'question_text', 'difficulty','order', 'answers']
+        fields = ['id', 'question_text', 'difficulty', 'order', 'answers']
 
 
 class QuestionPublicSerializer(serializers.ModelSerializer):
@@ -29,13 +29,12 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['id', 'question_text', 'order', 'answers']
+        fields = ['id', 'question_text', 'difficulty', 'order', 'answers']
 
 
 class QuizListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for list view — no nested questions."""
     created_by_name = serializers.SerializerMethodField()
-    question_count = serializers.SerializerMethodField()
+    question_count  = serializers.SerializerMethodField()
 
     class Meta:
         model = Quiz
@@ -48,13 +47,11 @@ class QuizListSerializer(serializers.ModelSerializer):
         return obj.created_by.full_name if obj.created_by else None
 
     def get_question_count(self, obj):
-        # Relies on annotated value if available, else fallback
         return getattr(obj, 'question_count', obj.questions.count())
 
 
 class QuizDetailSerializer(serializers.ModelSerializer):
-    """Full serializer with questions for admin/teacher."""
-    questions = QuestionSerializer(many=True, read_only=True)
+    questions       = QuestionPublicSerializer(many=True, read_only=True)
     created_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -78,11 +75,11 @@ class QuizCreateUpdateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-# --- Submit Attempt ---
+# ─── Submit ───────────────────────────────────────────────────────────────────
 
 class SubmitAnswerSerializer(serializers.Serializer):
     question_id = serializers.IntegerField()
-    answer_id = serializers.IntegerField()
+    answer_id   = serializers.IntegerField(allow_null=True, required=False)
 
 
 class QuizSubmitSerializer(serializers.Serializer):
@@ -102,5 +99,53 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         model = QuizAttempt
         fields = [
             'id', 'quiz_title', 'user_email',
-            'score', 'total_questions', 'correct_answers', 'submitted_at',
+            'score', 'total_marks', 'total_questions',
+            'correct_answers', 'submitted_at',
+        ]
+
+
+# ─── Attempt Detail (per-question breakdown) ──────────────────────────────────
+
+class AttemptAnswerSerializer(serializers.ModelSerializer):
+    question_text = serializers.CharField(source='question.question_text')
+    difficulty    = serializers.CharField(source='question.difficulty')
+    selected_text = serializers.SerializerMethodField()
+    correct_text  = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AttemptAnswer
+        fields = [
+            'id',
+            'question_text',
+            'difficulty',
+            'selected_text',
+            'correct_text',
+            'is_correct',
+            'marks_obtained',
+            'marks_possible',
+        ]
+
+    def get_selected_text(self, obj):
+        return obj.selected_answer.answer_text if obj.selected_answer else 'Skipped'
+
+    def get_correct_text(self, obj):
+        correct = obj.question.answers.filter(is_correct=True).first()
+        return correct.answer_text if correct else ''
+
+
+class QuizAttemptDetailSerializer(serializers.ModelSerializer):
+    quiz_title      = serializers.CharField(source='quiz.title', read_only=True)
+    attempt_answers = AttemptAnswerSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = QuizAttempt
+        fields = [
+            'id',
+            'quiz_title',
+            'score',
+            'total_marks',
+            'total_questions',
+            'correct_answers',
+            'submitted_at',
+            'attempt_answers',
         ]
