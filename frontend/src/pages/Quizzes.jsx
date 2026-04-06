@@ -53,7 +53,7 @@ function StatusBadge({ label }) {
 
 function QuizCard({ q, onClick }) {
   const countdown = useCountdown(q.seconds_until_start)
-  
+
   return (
     <div
       onClick={q.status_label === 'draft' ? undefined : onClick}
@@ -73,10 +73,10 @@ function QuizCard({ q, onClick }) {
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <StatusBadge label={q.status_label} />
             {q.subject && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-600 border border-blue-100">
-                <Tag size={9} />
-                {q.subject.class_level_display} · {q.subject.name}
-              </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-600 border border-green-600">
+                  <Tag size={9} />
+                  {q.subject.class_level_display} · <span className="text-green-600">{q.subject.name}</span>
+                </span>
             )}
           </div>
         </div>
