@@ -16,7 +16,6 @@ const CLASS_LEVELS = [
   { value: 'admission',label: 'Admission' },
 ]
 
-// Converts seconds → "2h 30m 10s" countdown string
 function formatCountdown(seconds) {
   if (!seconds || seconds <= 0) return null
   const h = Math.floor(seconds / 3600)
@@ -27,7 +26,6 @@ function formatCountdown(seconds) {
   return `${s}s`
 }
 
-// Live countdown hook — ticks every second
 function useCountdown(initialSeconds) {
   const [secs, setSecs] = useState(initialSeconds)
   useEffect(() => {
@@ -38,7 +36,6 @@ function useCountdown(initialSeconds) {
   return secs
 }
 
-// Status badge config
 const STATUS_CONFIG = {
   live:     { label: 'Live',     cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   upcoming: { label: 'Upcoming', cls: 'bg-amber-50  text-amber-700  border-amber-200'   },
@@ -56,7 +53,7 @@ function StatusBadge({ label }) {
 
 function QuizCard({ q, onClick }) {
   const countdown = useCountdown(q.seconds_until_start)
-
+  
   return (
     <div
       onClick={q.status_label === 'draft' ? undefined : onClick}
@@ -125,7 +122,6 @@ export default function Quizzes() {
   const [classLevel, setClassLevel] = useState('')
   const [subjectId,  setSubjectId]  = useState('')
 
-  // Fetch subjects for the selected class level
   useEffect(() => {
     setSubjectId('')
     if (!classLevel) { setSubjects([]); return }

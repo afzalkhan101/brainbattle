@@ -1,16 +1,10 @@
 from django.contrib import admin
 from .models import Subject, Quiz, Question, Answer, QuizAttempt, AttemptAnswer
 
-
-# ─────────────────────────────────────────────
-# Inline Models
-# ─────────────────────────────────────────────
-
 class AnswerInline(admin.TabularInline):
     model = Answer
     extra = 2
-
-
+    
 class QuestionInline(admin.StackedInline):
     model = Question
     extra = 1
@@ -23,9 +17,6 @@ class AttemptAnswerInline(admin.TabularInline):
     readonly_fields = ('is_correct', 'marks_obtained', 'marks_possible')
 
 
-# ─────────────────────────────────────────────
-# Subject Admin
-# ─────────────────────────────────────────────
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):
@@ -35,9 +26,6 @@ class SubjectAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
-# ─────────────────────────────────────────────
-# Quiz Admin
-# ─────────────────────────────────────────────
 
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
@@ -47,9 +35,6 @@ class QuizAdmin(admin.ModelAdmin):
     inlines = [QuestionInline]
 
 
-# ─────────────────────────────────────────────
-# Question Admin
-# ─────────────────────────────────────────────
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
@@ -58,9 +43,6 @@ class QuestionAdmin(admin.ModelAdmin):
     inlines = [AnswerInline]
 
 
-# ─────────────────────────────────────────────
-# Answer Admin
-# ─────────────────────────────────────────────
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
@@ -68,10 +50,6 @@ class AnswerAdmin(admin.ModelAdmin):
     list_filter = ('is_correct',)
     search_fields = ('answer_text',)
 
-
-# ─────────────────────────────────────────────
-# Quiz Attempt Admin
-# ─────────────────────────────────────────────
 
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
@@ -88,9 +66,6 @@ class QuizAttemptAdmin(admin.ModelAdmin):
     inlines = [AttemptAnswerInline]
 
 
-# ─────────────────────────────────────────────
-# Attempt Answer Admin
-# ─────────────────────────────────────────────
 
 @admin.register(AttemptAnswer)
 class AttemptAnswerAdmin(admin.ModelAdmin):

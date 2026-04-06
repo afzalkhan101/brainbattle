@@ -17,13 +17,7 @@ from .serializers import (
     QuizAttemptDetailSerializer,
 )
 
-
-# ─────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────
-
 MARKS_MAP = {'hard': 3, 'mid': 2, 'simple': 1}
-
 
 def _is_privileged(user) -> bool:
     return (
@@ -35,10 +29,6 @@ def _is_privileged(user) -> bool:
     )
 
 
-# ─────────────────────────────────────────────
-# Permissions
-# ─────────────────────────────────────────────
-
 class IsTeacherOrAdmin(IsAuthenticated):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
@@ -46,9 +36,6 @@ class IsTeacherOrAdmin(IsAuthenticated):
         return _is_privileged(request.user)
 
 
-# ─────────────────────────────────────────────
-# Subjects
-# ─────────────────────────────────────────────
 
 class SubjectListCreateView(generics.ListCreateAPIView):
     """
@@ -88,12 +75,7 @@ class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ('PUT', 'PATCH'):
             return [IsTeacherOrAdmin()]
         return [IsAuthenticatedOrReadOnly()]
-
-
-# ─────────────────────────────────────────────
-# Quiz — List / Create
-# ─────────────────────────────────────────────
-
+    
 class QuizListCreateView(generics.ListCreateAPIView):
     """
     GET  /quizzes/
@@ -114,15 +96,13 @@ class QuizListCreateView(generics.ListCreateAPIView):
             question_count=Count('questions', distinct=True)
         )
         user = self.request.user
-
+        
         if not _is_privileged(user):
-            # Students: only live quizzes
             qs = qs.filter(
                 Q(is_published=True, scheduled_at__isnull=True)
                 | Q(is_published=True, scheduled_at__lte=timezone.now())
             )
         else:
-            # Teacher/admin: optional status filter
             status_filter = self.request.query_params.get('status')
             if status_filter == 'draft':
                 qs = qs.filter(is_published=False)
@@ -155,10 +135,6 @@ class QuizListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
-
-# ─────────────────────────────────────────────
-# Quiz — Detail / Update / Delete
-# ─────────────────────────────────────────────
 
 class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -194,9 +170,6 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
         return [IsAuthenticatedOrReadOnly()]
 
 
-# ─────────────────────────────────────────────
-# Quiz Submit
-# ─────────────────────────────────────────────
 
 class QuizSubmitView(APIView):
     """
@@ -209,7 +182,6 @@ class QuizSubmitView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        # ── 1. Fetch ─────────────────────────────────────────────────────────
         try:
             quiz = (
                 Quiz.objects
@@ -218,8 +190,7 @@ class QuizSubmitView(APIView):
             )
         except Quiz.DoesNotExist:
             raise NotFound('Quiz not found.')
-
-        # ── 2. Scheduling gate ───────────────────────────────────────────────
+        
         if not quiz.is_live:
             return Response(
                 {
@@ -231,15 +202,13 @@ class QuizSubmitView(APIView):
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
-
-        # ── 3. Re-attempt guard ──────────────────────────────────────────────
+        
         if QuizAttempt.objects.filter(quiz=quiz, user=request.user).exists():
             return Response(
                 {'detail': 'You have already attempted this quiz.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # ── 4. Validate payload ──────────────────────────────────────────────
+        
         serializer = QuizSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -248,7 +217,6 @@ class QuizSubmitView(APIView):
             for item in serializer.validated_data['answers']
         }
 
-        # ── 5. Score ─────────────────────────────────────────────────────────
         total_marks    = 0
         obtained_marks = 0
         correct_count  = 0
@@ -280,7 +248,6 @@ class QuizSubmitView(APIView):
                 )
             )
 
-        # ── 6. Persist ───────────────────────────────────────────────────────
         attempt = QuizAttempt.objects.create(
             quiz=quiz,
             user=request.user,
@@ -294,15 +261,11 @@ class QuizSubmitView(APIView):
             rec.attempt = attempt
         AttemptAnswer.objects.bulk_create(answer_records)
 
-        # ── 7. Response ──────────────────────────────────────────────────────
         data = QuizAttemptSerializer(attempt).data
         data['total_submitted'] = len([v for v in submitted.values() if v])
         return Response({'attempt': data}, status=status.HTTP_201_CREATED)
 
 
-# ─────────────────────────────────────────────
-# Attempts
-# ─────────────────────────────────────────────
 
 class MyAttemptsView(generics.ListAPIView):
     """GET /attempts/   ?class_level=hsc"""
