@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-import { Search, BookOpen, Clock, HelpCircle, ChevronRight, Timer, Tag } from 'lucide-react'
+import { Search, BookOpen, Clock, HelpCircle, ChevronRight, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const CLASS_LEVELS = [
-  { value: '',         label: 'All Classes' },
+  { value: '',          label: 'All Classes' },
   { value: 'class_6',  label: 'Class 6' },
   { value: 'class_7',  label: 'Class 7' },
   { value: 'class_8',  label: 'Class 8' },
@@ -15,16 +15,6 @@ const CLASS_LEVELS = [
   { value: 'hsc',      label: 'HSC' },
   { value: 'admission',label: 'Admission' },
 ]
-
-function formatCountdown(seconds) {
-  if (!seconds || seconds <= 0) return null
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
 
 function useCountdown(initialSeconds) {
   const [secs, setSecs] = useState(initialSeconds)
@@ -51,13 +41,44 @@ function StatusBadge({ label }) {
   )
 }
 
+function CountdownCircle({ seconds }) {
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+
+  const units = d > 0
+    ? [{ v: d, l: 'day' }, { v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
+    : h > 0
+    ? [{ v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
+    : [{ v: m, l: 'min' }, { v: s, l: 'sec' }]
+
+  return (
+    <div className="flex items-center justify-center gap-2 py-2 mb-3">
+      {units.map(({ v, l }, i) => (
+        <div key={l} className="flex items-center gap-2">
+          <div className="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-amber-50 border border-amber-200">
+            <span className="text-sm font-bold tabular-nums text-amber-700 leading-none">
+              {String(v).padStart(2, '0')}
+            </span>
+            <span className="text-[9px] text-amber-500 mt-0.5">{l}</span>
+          </div>
+          {i < units.length - 1 && (
+            <span className="text-amber-400 font-bold text-sm mb-1">:</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function QuizCard({ q, onClick }) {
   const countdown = useCountdown(q.seconds_until_start)
 
   return (
     <div
       onClick={q.status_label === 'draft' ? undefined : onClick}
-      className={`card flex flex-col transition-all duration-200
+      className={`card group flex flex-col transition-all duration-200
         ${q.status_label === 'draft'
           ? 'opacity-60 cursor-not-allowed'
           : 'cursor-pointer hover:shadow-md hover:-translate-y-0.5'
@@ -73,10 +94,10 @@ function QuizCard({ q, onClick }) {
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <StatusBadge label={q.status_label} />
             {q.subject && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-600 border border-green-600">
-                  <Tag size={9} />
-                  {q.subject.class_level_display} · <span className="text-green-600">{q.subject.name}</span>
-                </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-600 border border-green-600">
+                <Tag size={9} />
+                {q.subject.class_level_display} · <span className="text-green-600">{q.subject.name}</span>
+              </span>
             )}
           </div>
         </div>
@@ -87,12 +108,9 @@ function QuizCard({ q, onClick }) {
         <p className="text-sm text-slate-500 line-clamp-2 mb-4">{q.description}</p>
       )}
 
-      {/* Upcoming countdown banner */}
+      {/* Countdown */}
       {q.status_label === 'upcoming' && countdown > 0 && (
-        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
-          <Timer size={12} className="shrink-0" />
-          <span>Starts in <span className="font-semibold tabular-nums">{formatCountdown(countdown)}</span></span>
-        </div>
+        <CountdownCircle seconds={countdown} />
       )}
 
       {/* Footer */}
@@ -107,7 +125,14 @@ function QuizCard({ q, onClick }) {
             {q.duration_minutes} min
           </span>
         </div>
-        <ChevronRight size={15} className="text-slate-300" />
+
+        {/* A3 — Pulse ring */}
+        <div className="relative w-7 h-7">
+          <div className="absolute inset-0 rounded-full border border-violet-400 opacity-0 group-hover:animate-[pulse-out_0.6s_ease-out_infinite]" />
+          <div className="absolute inset-0 rounded-full bg-violet-600 flex items-center justify-center">
+            <ChevronRight size={13} color="white" strokeWidth={2.5} />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -143,7 +168,6 @@ export default function Quizzes() {
     finally { setLoading(false) }
   }
 
-  // Debounce search, re-fetch on filter change
   useEffect(() => {
     const t = setTimeout(fetchList, 350)
     return () => clearTimeout(t)
@@ -159,7 +183,6 @@ export default function Quizzes() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
-        {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -170,7 +193,6 @@ export default function Quizzes() {
           />
         </div>
 
-        {/* Class level */}
         <select
           className="input w-auto pr-8"
           value={classLevel}
@@ -181,7 +203,6 @@ export default function Quizzes() {
           ))}
         </select>
 
-        {/* Subject — only shown when class level selected */}
         {subjects.length > 0 && (
           <select
             className="input w-auto pr-8"

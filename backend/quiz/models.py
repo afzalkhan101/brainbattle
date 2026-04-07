@@ -3,10 +3,6 @@ from django.conf import settings
 from django.utils import timezone
 
 
-# ─────────────────────────────────────────────
-# Constants
-# ─────────────────────────────────────────────
-
 CLASS_LEVEL_CHOICES = [
     ('class_6',   'Class 6'),
     ('class_7',   'Class 7'),
@@ -17,11 +13,6 @@ CLASS_LEVEL_CHOICES = [
     ('hsc',       'HSC'),
     ('admission', 'Admission'),
 ]
-
-
-# ─────────────────────────────────────────────
-# Subject
-# ─────────────────────────────────────────────
 
 class Subject(models.Model):
     name        = models.CharField(max_length=100)
@@ -36,11 +27,8 @@ class Subject(models.Model):
 
     def __str__(self):
         return f"{self.name} — {self.get_class_level_display()}"
+    
 
-
-# ─────────────────────────────────────────────
-# Quiz
-# ─────────────────────────────────────────────
 
 class Quiz(models.Model):
     title            = models.CharField(max_length=255)
@@ -69,15 +57,12 @@ class Quiz(models.Model):
     )
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
-
     class Meta:
         ordering            = ['-created_at']
         verbose_name_plural = 'Quizzes'
-
     def __str__(self):
         return self.title
-
-    # ── Computed state ──────────────────────────────
+    
     @property
     def is_live(self) -> bool:
         """True when published AND scheduled time has passed (or no schedule set)."""
@@ -103,11 +88,7 @@ class Quiz(models.Model):
         if self.is_upcoming:
             return 'upcoming'
         return 'live'
-
-
-# ─────────────────────────────────────────────
-# Question
-# ─────────────────────────────────────────────
+    
 
 class Question(models.Model):
     DIFFICULTY_CHOICES = (
@@ -132,10 +113,6 @@ class Question(models.Model):
         return f"{self.question_text[:50]} ({self.difficulty})"
 
 
-# ─────────────────────────────────────────────
-# Answer
-# ─────────────────────────────────────────────
-
 class Answer(models.Model):
     question    = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     answer_text = models.TextField()
@@ -145,9 +122,6 @@ class Answer(models.Model):
         return self.answer_text[:80]
 
 
-# ─────────────────────────────────────────────
-# QuizAttempt
-# ─────────────────────────────────────────────
 
 class QuizAttempt(models.Model):
     quiz            = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
@@ -169,9 +143,6 @@ class QuizAttempt(models.Model):
         return f'{self.user} — {self.quiz} ({self.score}/{self.total_marks})'
 
 
-# ─────────────────────────────────────────────
-# AttemptAnswer
-# ─────────────────────────────────────────────
 
 class AttemptAnswer(models.Model):
     attempt         = models.ForeignKey(
