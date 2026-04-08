@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { Search, BookOpen, Clock, HelpCircle, ChevronRight, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
+import QuizDetailModal from "./QuizDetailModal";
 
 const CLASS_LEVELS = [
   { value: '',          label: 'All Classes' },
@@ -125,8 +125,6 @@ function QuizCard({ q, onClick }) {
             {q.duration_minutes} min
           </span>
         </div>
-
-        {/* A3 — Pulse ring */}
         <div className="relative w-7 h-7">
           <div className="absolute inset-0 rounded-full border border-violet-400 opacity-0 group-hover:animate-[pulse-out_0.6s_ease-out_infinite]" />
           <div className="absolute inset-0 rounded-full bg-violet-600 flex items-center justify-center">
@@ -139,13 +137,13 @@ function QuizCard({ q, onClick }) {
 }
 
 export default function Quizzes() {
-  const navigate    = useNavigate()
-  const [list,       setList]       = useState([])
-  const [subjects,   setSubjects]   = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [search,     setSearch]     = useState('')
-  const [classLevel, setClassLevel] = useState('')
-  const [subjectId,  setSubjectId]  = useState('')
+  const [list,         setList]         = useState([])
+  const [subjects,     setSubjects]     = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [search,       setSearch]       = useState('')
+  const [classLevel,   setClassLevel]   = useState('')
+  const [subjectId,    setSubjectId]    = useState('')
+  const [selectedQuiz, setSelectedQuiz] = useState(null)   // ← modal state
 
   useEffect(() => {
     setSubjectId('')
@@ -233,10 +231,18 @@ export default function Quizzes() {
             <QuizCard
               key={q.id}
               q={q}
-              onClick={() => navigate(`/quizzes/${q.id}`)}
+              onClick={() => setSelectedQuiz(q)}        // ← modal open
             />
           ))}
         </div>
+      )}
+
+      {/* Detail modal */}
+      {selectedQuiz && (
+        <QuizDetailModal
+          quiz={selectedQuiz}
+          onClose={() => setSelectedQuiz(null)}
+        />
       )}
     </div>
   )
