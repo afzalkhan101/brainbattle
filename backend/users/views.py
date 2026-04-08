@@ -15,9 +15,6 @@ from .serializers import (
     WalletSerializer,
 )
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _get_tokens(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -25,8 +22,6 @@ def _get_tokens(user):
         "access":  str(refresh.access_token),
     }
 
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
 
 class RegisterView(APIView):
     """
@@ -94,7 +89,6 @@ class LogoutView(APIView):
             )
 
 
-# ── Profile ───────────────────────────────────────────────────────────────────
 
 class ProfileView(APIView):
     """
