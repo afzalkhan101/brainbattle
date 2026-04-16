@@ -4,19 +4,25 @@ import {
   X, BookOpen, Clock, HelpCircle, Tag, ChevronRight, AlertCircle,
 } from 'lucide-react'
 
-/* ─── countdown hook ─────────────────────────────────────────────────────── */
+/* countdown hook */
 function useCountdown(initialSeconds) {
   const [secs, setSecs] = useState(initialSeconds ?? 0)
+
   useEffect(() => {
     if (!initialSeconds || initialSeconds <= 0) return
     setSecs(initialSeconds)
-    const id = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000)
+
+    const id = setInterval(() => {
+      setSecs((s) => (s > 0 ? s - 1 : 0))
+    }, 1000)
+
     return () => clearInterval(id)
   }, [initialSeconds])
+
   return secs
 }
 
-/* ─── countdown strip ────────────────────────────────────────────────────── */
+/* countdown strip */
 function CountdownStrip({ seconds }) {
   const live = useCountdown(seconds)
 
@@ -25,26 +31,28 @@ function CountdownStrip({ seconds }) {
   const m = Math.floor((live % 3600) / 60)
   const s = live % 60
 
-  const units = d > 0
-    ? [{ v: d, l: 'day' }, { v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
-    : h > 0
-    ? [{ v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
-    : [{ v: m, l: 'min' }, { v: s, l: 'sec' }]
+  const units =
+    d > 0
+      ? [{ v: d, l: 'day' }, { v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
+      : h > 0
+      ? [{ v: h, l: 'hr' }, { v: m, l: 'min' }, { v: s, l: 'sec' }]
+      : [{ v: m, l: 'min' }, { v: s, l: 'sec' }]
 
   if (live <= 0) return null
 
   return (
-    <div className="flex items-center justify-center gap-2 py-3">
+    <div className="flex flex-wrap md:flex-nowrap items-center justify-center gap-2 py-3">
       {units.map(({ v, l }, i) => (
         <div key={l} className="flex items-center gap-2">
-          <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-amber-50 border border-amber-200">
-            <span className="text-base font-bold tabular-nums text-amber-700 leading-none">
+          <div className="flex flex-col items-center justify-center w-12 md:w-14 h-12 md:h-14 rounded-full bg-amber-50 border border-amber-200">
+            <span className="text-sm md:text-base font-bold text-amber-700 tabular-nums">
               {String(v).padStart(2, '0')}
             </span>
-            <span className="text-[9px] text-amber-500 mt-0.5">{l}</span>
+            <span className="text-[9px] text-amber-500">{l}</span>
           </div>
+
           {i < units.length - 1 && (
-            <span className="text-amber-400 font-bold text-sm mb-1">:</span>
+            <span className="text-amber-400 font-bold">:</span>
           )}
         </div>
       ))}
@@ -52,40 +60,33 @@ function CountdownStrip({ seconds }) {
   )
 }
 
-/* ─── info tile ──────────────────────────────────────────────────────────── */
-function InfoTile({ icon: Icon, label, value, className = '' }) {
+/* info tile */
+function InfoTile({ icon: Icon, label, value }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 bg-slate-50 border border-slate-100 ${className}`}>
-      <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center shrink-0">
+    <div className="flex items-center gap-3 rounded-xl px-3 md:px-4 py-3 bg-slate-50 border border-slate-100">
+      <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center">
         <Icon size={14} className="text-slate-500" />
       </div>
+
       <div>
-        <p className="text-[11px] text-slate-400 leading-none mb-0.5">{label}</p>
-        <p className="text-[13px] font-semibold text-slate-700 leading-tight">{value}</p>
+        <p className="text-[11px] text-slate-400">{label}</p>
+        <p className="text-[13px] font-semibold text-slate-700">{value}</p>
       </div>
     </div>
   )
 }
 
-/* ─── main modal ─────────────────────────────────────────────────────────── */
+/* modal */
 export default function QuizDetailModal({ quiz, onClose }) {
   const overlayRef = useRef(null)
-  const navigate   = useNavigate()
+  const navigate = useNavigate()
 
-  /* Escape key */
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    const handler = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  /* Lock body scroll */
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
-
-  /* Click-outside */
   const handleOverlay = (e) => {
     if (e.target === overlayRef.current) onClose()
   }
@@ -97,63 +98,72 @@ export default function QuizDetailModal({ quiz, onClose }) {
 
   if (!quiz) return null
 
-  const isLive     = quiz.status_label === 'live'
+  const isLive = quiz.status_label === 'live'
   const isUpcoming = quiz.status_label === 'upcoming'
-  const isDraft    = quiz.status_label === 'draft'
+  const isDraft = quiz.status_label === 'draft'
 
   return (
     <div
       ref={overlayRef}
       onClick={handleOverlay}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/40 backdrop-blur-sm"
     >
-      {/* 🔥 UPDATED SIZE HERE */}
-      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      {/* MODAL BOX */}
+      <div className="relative w-full max-w-md md:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
 
-        {/* Header */}
-        <div className="relative bg-gradient-to-br from-violet-600 to-violet-700 px-6 pt-6 pb-5 shrink-0">
+        {/* HEADER */}
+        <div className="relative bg-gradient-to-br from-violet-600 to-violet-700 px-5 md:px-6 pt-5 md:pt-6 pb-4 md:pb-5">
+
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
           >
             <X size={14} color="white" />
           </button>
 
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-2 md:mb-3">
             {isLive && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-400/20 text-emerald-100 border border-emerald-300/30">
-                Live now
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] bg-emerald-400/20 text-emerald-100 border border-emerald-300/30">
+                Live
               </span>
             )}
+
             {isUpcoming && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-300/20 text-amber-100 border border-amber-300/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] bg-amber-300/20 text-amber-100 border border-amber-300/30">
                 Upcoming
               </span>
             )}
+
             {quiz.subject && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white/80 border border-white/20">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] bg-white/10 text-white/80 border border-white/20 flex items-center gap-1">
                 <Tag size={9} />
-                {quiz.subject.class_level_display} · {quiz.subject.name}
+                {quiz.subject.name}
               </span>
             )}
           </div>
 
-          <h2 className="text-xl font-bold text-white">{quiz.title}</h2>
+          <h2 className="text-lg md:text-xl font-bold text-white">
+            {quiz.title}
+          </h2>
+
           {quiz.description && (
-            <p className="mt-1.5 text-sm text-white/70">{quiz.description}</p>
+            <p className="text-sm text-white/70 mt-1">
+              {quiz.description}
+            </p>
           )}
         </div>
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1">
+        {/* BODY */}
+        <div className="overflow-y-auto flex-1 max-h-[70vh]">
 
           {isUpcoming && quiz.seconds_until_start > 0 && (
-            <div className="px-6 pt-4">
+            <div className="px-4 md:px-6 pt-4">
               <CountdownStrip seconds={quiz.seconds_until_start} />
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2 px-6 py-4">
+          {/* GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 px-4 md:px-6 py-4">
             <InfoTile icon={HelpCircle} label="Questions" value={`${quiz.question_count ?? '-'} MCQ`} />
             <InfoTile icon={Clock} label="Duration" value={`${quiz.duration_minutes} min`} />
 
@@ -166,10 +176,11 @@ export default function QuizDetailModal({ quiz, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-white shrink-0">
+        {/* FOOTER */}
+        <div className="px-4 md:px-6 py-4 border-t border-slate-100">
+
           {isDraft ? (
-            <div className="flex items-center justify-center text-slate-400 text-sm">
+            <div className="flex items-center justify-center text-slate-400 text-sm gap-1">
               <AlertCircle size={14} />
               Not published
             </div>
@@ -177,7 +188,7 @@ export default function QuizDetailModal({ quiz, onClose }) {
             <button
               onClick={handleEnter}
               disabled={isUpcoming}
-              className={`w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2
+              className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2
                 ${isUpcoming
                   ? 'bg-slate-100 text-slate-400'
                   : 'bg-violet-600 hover:bg-violet-700 text-white'
@@ -187,6 +198,7 @@ export default function QuizDetailModal({ quiz, onClose }) {
               <ChevronRight size={15} />
             </button>
           )}
+
         </div>
 
       </div>

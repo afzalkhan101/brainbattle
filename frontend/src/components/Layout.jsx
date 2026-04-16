@@ -61,7 +61,7 @@ export default function Layout({ children }) {
 
             <div
               onClick={() => setCollapsed((prev) => !prev)}
-              className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center cursor-pointer transition-all"
+              className="hidden lg:flex w-8 h-8 rounded-lg bg-primary-600 items-center justify-center cursor-pointer transition-all"
             >
               <MdOutlineArrowBack
                 size={16}
