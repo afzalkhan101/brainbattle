@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const DIFFICULTY_COLOR = {
   easy: 'bg-emerald-50 text-emerald-600 border-emerald-200',
   mid:  'bg-amber-50 text-amber-600 border-amber-200',
@@ -15,7 +14,6 @@ const DIFFICULTY_COLOR = {
 }
 const DIFFICULTY_LABEL = { easy: 'Easy', mid: 'Medium', hard: 'Hard' }
 
-// ─── Small Helpers ────────────────────────────────────────────────────────────
 const DifficultyBadge = ({ level }) => (
   <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${DIFFICULTY_COLOR[level] ?? 'bg-slate-50 text-slate-500 border-slate-200'}`}>
     {DIFFICULTY_LABEL[level] ?? level}
@@ -31,7 +29,6 @@ const ScoreBadge = ({ score, total }) => {
   )
 }
 
-// ─── Attempt Detail Modal ─────────────────────────────────────────────────────
 function AttemptDetailModal({ attemptId, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -42,9 +39,8 @@ function AttemptDetailModal({ attemptId, onClose }) {
       .catch(() => toast.error('Failed to load attempt details'))
       .finally(() => setLoading(false))
   }, [attemptId])
-
+  
   return (
-    /* Overlay */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 "
       style={{ backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)' }}
@@ -181,7 +177,6 @@ function AttemptDetailModal({ attemptId, onClose }) {
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function MyAttempts() {
   const navigate = useNavigate()
   const [attempts, setAttempts]       = useState([])

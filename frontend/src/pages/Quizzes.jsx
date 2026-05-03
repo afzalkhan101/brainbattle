@@ -7,8 +7,6 @@ import {
 import toast from 'react-hot-toast'
 import QuizDetailModal from './QuizDetailModal'
 
-/* ─── Constants ────────────────────────────────────────────────────── */
-
 const CLASS_LEVELS = [
   { value: 'class_6',  label: 'Class 6' },
   { value: 'class_7',  label: 'Class 7' },
@@ -26,8 +24,6 @@ const STATUS = {
   draft:    { label: 'Draft',    bg: 'bg-slate-100',   text: 'text-slate-500',   border: 'border-slate-200',  dot: 'bg-slate-400' },
 }
 
-/* ─── Status Badge ──────────────────────────────────────────────────── */
-
 function StatusBadge({ label }) {
   const s = STATUS[label] ?? STATUS.draft
   return (
@@ -44,8 +40,6 @@ function StatusBadge({ label }) {
   )
 }
 
-/* ─── Countdown Hook ────────────────────────────────────────────────── */
-
 function useCountdown(initialSeconds) {
   const [secs, setSecs] = useState(initialSeconds ?? 0)
 
@@ -58,8 +52,6 @@ function useCountdown(initialSeconds) {
 
   return secs
 }
-
-/* ─── Countdown Display ─────────────────────────────────────────────── */
 
 function CountdownBar({ seconds }) {
   const d = Math.floor(seconds / 86400)
@@ -96,8 +88,6 @@ function CountdownBar({ seconds }) {
   )
 }
 
-/* ─── Skeleton Card ─────────────────────────────────────────────────── */
-
 function SkeletonCard() {
   return (
     <div className="card animate-pulse">
@@ -119,8 +109,6 @@ function SkeletonCard() {
     </div>
   )
 }
-
-/* ─── Quiz Card ─────────────────────────────────────────────────────── */
 
 function QuizCard({ q, onClick }) {
   const countdown = useCountdown(q.seconds_until_start)
@@ -213,8 +201,6 @@ function QuizCard({ q, onClick }) {
   )
 }
 
-/* ─── Filter Pill ───────────────────────────────────────────────────── */
-
 function FilterPill({ label, onRemove }) {
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200">
@@ -229,7 +215,6 @@ function FilterPill({ label, onRemove }) {
   )
 }
 
-/* ─── Main Component ────────────────────────────────────────────────── */
 
 export default function Quizzes() {
   const [list, setList]           = useState([])
@@ -240,7 +225,6 @@ export default function Quizzes() {
   const [subjectId, setSubjectId] = useState('')
   const [selectedQuiz, setSelectedQuiz] = useState(null)
 
-  /* Subject load on class change */
   useEffect(() => {
     setSubjectId('')
     if (!classLevel) { setSubjects([]); return }
@@ -249,7 +233,6 @@ export default function Quizzes() {
       .catch(() => {})
   }, [classLevel])
 
-  /* Debounced quiz fetch */
   const fetchList = useCallback(async () => {
     setLoading(true)
     try {
@@ -270,8 +253,7 @@ export default function Quizzes() {
     const t = setTimeout(fetchList, 300)
     return () => clearTimeout(t)
   }, [fetchList])
-
-  /* Active filter labels */
+  
   const activeClassLabel   = CLASS_LEVELS.find(c => c.value === classLevel)?.label
   const activeSubjectLabel = subjects.find(s => String(s.id) === subjectId)?.name
   const hasFilters         = classLevel || subjectId || search

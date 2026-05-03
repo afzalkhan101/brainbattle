@@ -4,15 +4,10 @@ import api from "../api/axios";
 import { ArrowLeft, ChevronRight, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
-
-/* ─── constants ─────────────────────────────────────────────── */
 const DIFF_TIME  = { easy: 10, mid: 15, hard: 20 };
 const DIFF_LABEL = { easy: "Easy", mid: "Medium", hard: "Hard" };
 const LETTERS    = ["A", "B", "C", "D"];
-
 const getTimeLimit = (d) => DIFF_TIME[d] ?? 15;
-
-/* ─── sub-components ─────────────────────────────────────────── */
 function DifficultyBadge({ level }) {
   const styles = {
     easy: { badge: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-600" },
@@ -65,7 +60,6 @@ function TimerRing({ timeLeft, total, danger }) {
   );
 }
 
-/* ─── main component ─────────────────────────────────────────── */
 export default function QuizDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
@@ -81,7 +75,6 @@ export default function QuizDetail() {
   const [showExpired, setShowExpired] = useState(false);
   const timerRef = useRef(null);
 
-  /* fetch quiz */
   useEffect(() => {
     api
       .get(`/api/quizzes/${id}/`)
@@ -92,8 +85,6 @@ export default function QuizDetail() {
   const questions = quiz?.questions ?? [];
   const currentQ  = questions[currentIdx];
   const isLastQ   = currentIdx === questions.length - 1;
-
-  /* timer */
   const startTimer = useCallback((q) => {
     clearInterval(timerRef.current);
     setTimeLeft(getTimeLimit(q?.difficulty));
@@ -119,7 +110,6 @@ export default function QuizDetail() {
     return () => clearInterval(timerRef.current);
   }, [currentIdx, currentQ?.id, result]);
 
-  /* actions */
   const select = (qId, aId) => {
     if (result || lockedQs.has(qId)) return;
     setAnswers((p) => ({ ...p, [qId]: aId }));
@@ -162,8 +152,7 @@ export default function QuizDetail() {
       setSubmitting(false);
     }
   };
-
-  /* ── loading ── */
+  
   if (loading)
     return (
       <div className="flex justify-center py-20">
