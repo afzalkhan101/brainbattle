@@ -4,7 +4,6 @@ import {
   X, BookOpen, Clock, HelpCircle, Tag, ChevronRight, AlertCircle,
 } from 'lucide-react'
 
-/* countdown hook */
 function useCountdown(initialSeconds) {
   const [secs, setSecs] = useState(initialSeconds ?? 0)
 
@@ -22,7 +21,6 @@ function useCountdown(initialSeconds) {
   return secs
 }
 
-/* countdown strip */
 function CountdownStrip({ seconds }) {
   const live = useCountdown(seconds)
 
