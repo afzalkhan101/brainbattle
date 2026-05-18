@@ -82,9 +82,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Full read-only profile serializer.
     Used in GET /profile/ and in auth responses.
     """
-    full_name   = serializers.ReadOnlyField()
-    referred_by = ReferredBySerializer(read_only=True)
+    full_name      = serializers.ReadOnlyField()
+    referred_by    = ReferredBySerializer(read_only=True)
     wallet_balance = serializers.SerializerMethodField()
+    profile_image  = serializers.SerializerMethodField()
 
     class Meta:
         model  = User
@@ -106,6 +107,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "date_joined",
         ]
         read_only_fields = fields  # all read-only
+
+    def get_profile_image(self, obj):
+        if not obj.profile_image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.profile_image.url)
+        return obj.profile_image.url
 
     def get_wallet_balance(self, obj):
         try:
