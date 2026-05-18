@@ -8,6 +8,7 @@ def user_profile_image_path(instance, filename):
     return f"users/profile_images/{instance.pk}/{uuid.uuid4().hex}.{ext}"
 
 
+
 class UserManager(BaseUserManager):
 
     def create_user(self, email, password=None, **extra_fields):
@@ -44,12 +45,35 @@ class User(AbstractBaseUser, PermissionsMixin):
         COACHING_CENTER_OWNER = "coaching_center_owner", "Coaching Center Owner"
         UNIVERSITY_ADMIN      = "university_admin",      "University Admin"
 
+
     class ClassLevel(models.TextChoices):
+        CLASS_6   = "class_6",   "Class 6"
+        CLASS_7   = "class_7",   "Class 7"
+        CLASS_8   = "class_8",   "Class 8"
+        CLASS_9   = "class_9",   "Class 9"
+        CLASS_10  = "class_10",  "Class 10"
         SSC       = "ssc",       "SSC"
         HSC       = "hsc",       "HSC"
         ADMISSION = "admission", "Admission"
 
-    # ── Core ──────────────────────────────────────────────────────────────────
+    class Board(models.TextChoices):
+        DHAKA      = "Dhaka",      "Dhaka"
+        CHITTAGONG = "Chittagong", "Chittagong"
+        RAJSHAHI   = "Rajshahi",   "Rajshahi"
+        SYLHET     = "Sylhet",     "Sylhet"
+        BARISAL    = "Barisal",    "Barisal"
+        JESSORE    = "Jessore",    "Jessore"
+        COMILLA    = "Comilla",    "Comilla"
+        DINAJPUR   = "Dinajpur",   "Dinajpur"
+        MYMENSINGH = "Mymensingh", "Mymensingh"
+        MADRASA    = "Madrasa",    "Madrasa"
+        TECHNICAL  = "Technical",  "Technical"
+
+    class SubjectGroup(models.TextChoices):
+        SCIENCE    = "Science",          "Science"
+        COMMERCE   = "Commerce",         "Commerce"
+        ARTS       = "Arts / Humanities","Arts / Humanities"
+
     email = models.EmailField(unique=True, db_index=True)
     first_name = models.CharField(max_length=100)
     last_name  = models.CharField(max_length=100)
@@ -60,13 +84,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_index=True,
     )
 
-    # ── Profile ───────────────────────────────────────────────────────────────
     phone         = models.CharField(max_length=20, blank=True, default="")
     profile_image = models.ImageField(
         upload_to=user_profile_image_path,
         null=True,
         blank=True,
     )
+
     class_level = models.CharField(
         max_length=20,
         choices=ClassLevel.choices,
@@ -74,16 +98,33 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
     )
     institution = models.CharField(max_length=255, blank=True, default="")
+    district    = models.CharField(max_length=100, blank=True, default="")
 
-    # ── Email verification ────────────────────────────────────────────────────
+
+    board = models.CharField(
+        max_length=20,
+        choices=Board.choices,
+        blank=True,
+        default="",
+    )
+    subject_group = models.CharField(
+        max_length=20,
+        choices=SubjectGroup.choices,
+        blank=True,
+        default="",
+    )
+
+    roll_number = models.CharField(max_length=50, blank=True, default="")
+    reg_number  = models.CharField(max_length=50, blank=True, default="")
+    exam_year   = models.CharField(max_length=10, blank=True, default="")
+
     is_email_verified = models.BooleanField(default=False)
 
-    # ── Django internals ──────────────────────────────────────────────────────
+
     is_active   = models.BooleanField(default=True)
     is_staff    = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
-    # ── Referral ──────────────────────────────────────────────────────────────
     referral_code = models.CharField(
         max_length=20,
         unique=True,
@@ -126,9 +167,11 @@ class User(AbstractBaseUser, PermissionsMixin):
             code = uuid.uuid4().hex[:10].upper()
             if not User.objects.filter(referral_code=code).exists():
                 return code
+            
 
 
-# ── Wallet ────────────────────────────────────────────────────────────────────
+
+
 
 class Wallet(models.Model):
     user    = models.OneToOneField(User, on_delete=models.CASCADE, related_name="wallet")

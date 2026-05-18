@@ -7,8 +7,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     password         = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
     referred_by_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
-
-    # Only these roles are allowed during public registration
     ALLOWED_ROLES = {User.Role.STUDENT, User.Role.COACHING_CENTER_OWNER, User.Role.UNIVERSITY_ADMIN}
 
     class Meta:
@@ -98,8 +96,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "role",
             "phone",
             "profile_image",
+            # ── Academic ──────────────────────
             "class_level",
             "institution",
+            "district",
+            "board",
+            "subject_group",
+            "roll_number",
+            "reg_number",
+            "exam_year",
+            # ──────────────────────────────────
             "is_email_verified",
             "referral_code",
             "referred_by",
@@ -135,8 +141,16 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "last_name",
             "phone",
             "profile_image",
+            # ── Academic ──────────────────────
             "class_level",
             "institution",
+            "district",
+            "board",
+            "subject_group",
+            "roll_number",
+            "reg_number",
+            "exam_year",
+            # ──────────────────────────────────
         ]
 
     def validate_phone(self, value):

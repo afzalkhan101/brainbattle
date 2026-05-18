@@ -10,20 +10,20 @@ import toast from 'react-hot-toast'
 
 
 const CLASS_LEVEL_OPTIONS = [
-  { value: '',          label: 'Not selected',  group: null },
-  { value: 'class_6',   label: 'Class 6',       group: 'School' },
-  { value: 'class_7',   label: 'Class 7',       group: 'School' },
-  { value: 'class_8',   label: 'Class 8',       group: 'School' },
-  { value: 'class_9',   label: 'Class 9',       group: 'School' },
-  { value: 'class_10',  label: 'Class 10',      group: 'School' },
-  { value: 'ssc',       label: 'SSC',           group: 'Board Exam' },
-  { value: 'hsc',       label: 'HSC',           group: 'Board Exam' },
-  { value: 'admission', label: 'Admission',     group: 'University' },
+  { value: '',          label: 'Not selected', group: null },
+  { value: 'class_6',  label: 'Class 6',      group: 'School' },
+  { value: 'class_7',  label: 'Class 7',      group: 'School' },
+  { value: 'class_8',  label: 'Class 8',      group: 'School' },
+  { value: 'class_9',  label: 'Class 9',      group: 'School' },
+  { value: 'class_10', label: 'Class 10',     group: 'School' },
+  { value: 'ssc',      label: 'SSC',          group: 'Board Exam' },
+  { value: 'hsc',      label: 'HSC',          group: 'Board Exam' },
+  { value: 'admission',label: 'Admission',    group: 'University' },
 ]
 
 const BOARD_OPTIONS = [
   '', 'Dhaka', 'Chittagong', 'Rajshahi', 'Sylhet',
-  'Barisal', 'Jessore', 'Comilla', 'Dinajpur', 'Mymensingh', 'Madrasa', 'Technical'
+  'Barisal', 'Jessore', 'Comilla', 'Dinajpur', 'Mymensingh', 'Madrasa', 'Technical',
 ]
 
 const SUBJECT_GROUP_OPTIONS = ['', 'Science', 'Commerce', 'Arts / Humanities']
@@ -36,7 +36,7 @@ const TABS = [
 
 export default function Profile() {
   const { user, updateUser } = useAuth()
-  const [tab, setTab] = useState('profile')
+  const [tab, setTab]       = useState('profile')
   const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
@@ -53,19 +53,14 @@ export default function Profile() {
     district:      user?.district      ?? '',
   })
 
-  const [pw, setPw] = useState({ old_password: '', new_password: '', confirm_password: '' })
+  const [pw, setPw]         = useState({ old_password: '', new_password: '', confirm_password: '' })
   const [imgFile, setImgFile] = useState(null)
-
-  // FIX 1: preview is derived — always prefer local blob, then fresh user data from context
   const [preview, setPreview] = useState(user?.profile_image ?? null)
-
   const [pwVisible, setPwVisible] = useState({ old: false, new: false, confirm: false })
 
-  // FIX 2: Sync preview when user context updates (e.g. after save clears imgFile)
+  // Sync preview when user context updates
   useEffect(() => {
-    if (!imgFile) {
-      setPreview(user?.profile_image ?? null)
-    }
+    if (!imgFile) setPreview(user?.profile_image ?? null)
   }, [user?.profile_image, imgFile])
 
   const set  = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -74,14 +69,12 @@ export default function Profile() {
   const handleImagePick = (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
     setImgFile(file)
-    // Revoke previous blob URL to avoid memory leaks
-    if (preview && preview.startsWith('blob:')) {
-      URL.revokeObjectURL(preview)
-    }
     setPreview(URL.createObjectURL(file))
   }
 
+  // ── Personal Info ──────────────────────────────────────────────────────────
   const handleProfile = async (e) => {
     e.preventDefault()
     setSaving(true)
@@ -95,13 +88,8 @@ export default function Profile() {
       const { data } = await api.patch('/api/auth/profile/update/', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-
       updateUser(data)
-
-      // FIX 3: After successful save, clear the local file reference.
-      // The useEffect above will then sync preview from the updated user context (server URL).
       setImgFile(null)
-
       toast.success('Profile updated!')
     } catch (err) {
       const d = err.response?.data
@@ -110,12 +98,12 @@ export default function Profile() {
     } finally { setSaving(false) }
   }
 
+  // ── Academic Info ──────────────────────────────────────────────────────────
   const handleAcademic = async (e) => {
     e.preventDefault()
     setSaving(true)
     try {
       const fd = new FormData()
-      // FIX 4: Send ALL academic fields, not just class_level + institution
       ;['class_level', 'institution', 'board', 'subject_group', 'roll_number', 'reg_number', 'exam_year', 'district'].forEach(
         (k) => fd.append(k, form[k] ?? '')
       )
@@ -132,6 +120,7 @@ export default function Profile() {
     } finally { setSaving(false) }
   }
 
+  // ── Password ───────────────────────────────────────────────────────────────
   const handlePassword = async (e) => {
     e.preventDefault()
     if (pw.new_password !== pw.confirm_password) { toast.error('Passwords do not match'); return }
@@ -155,11 +144,11 @@ export default function Profile() {
     toast.success('Referral code copied!')
   }
 
-  const initials = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase()
+  const initials        = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase()
   const classLevelLabel = CLASS_LEVEL_OPTIONS.find(o => o.value === user?.class_level)?.label ?? ''
   const completionFields = ['first_name', 'last_name', 'phone', 'institution', 'class_level', 'profile_image']
-  const filled = completionFields.filter(f => user?.[f]).length
-  const completion = Math.round((filled / completionFields.length) * 100)
+  const filled      = completionFields.filter(f => user?.[f]).length
+  const completion  = Math.round((filled / completionFields.length) * 100)
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -175,7 +164,6 @@ export default function Profile() {
         <div className="flex items-start gap-5">
           <div className="relative flex-shrink-0">
             <div className="w-20 h-20 rounded-2xl overflow-hidden bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-bold shadow-sm">
-              {/* FIX 5: preview is always correct — blob while editing, server URL after save */}
               {preview
                 ? <img src={preview} alt="avatar" className="w-full h-full object-cover" />
                 : <span>{initials}</span>
@@ -203,6 +191,12 @@ export default function Profile() {
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                       <GraduationCap size={10} />
                       {classLevelLabel}
+                    </span>
+                  )}
+                  {user?.board && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">
+                      <Shield size={10} />
+                      {user.board} Board
                     </span>
                   )}
                   {user?.is_email_verified && (
@@ -238,10 +232,20 @@ export default function Profile() {
           </div>
         </div>
 
-        {user?.institution && (
-          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 text-sm text-slate-600">
-            <Building size={13} className="text-slate-400" />
-            <span>{user.institution}</span>
+        {(user?.institution || user?.district) && (
+          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-4 flex-wrap">
+            {user?.institution && (
+              <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                <Building size={13} className="text-slate-400" />
+                {user.institution}
+              </span>
+            )}
+            {user?.district && (
+              <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                <MapPin size={13} className="text-slate-400" />
+                {user.district}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -263,7 +267,7 @@ export default function Profile() {
         ))}
       </div>
 
-      {/* Personal Info */}
+      {/* ── Personal Info ── */}
       {tab === 'profile' && (
         <form onSubmit={handleProfile} className="card space-y-5">
           <div className="flex items-center gap-2 mb-1">
@@ -271,7 +275,6 @@ export default function Profile() {
             <h3 className="font-semibold text-slate-800">Personal Information</h3>
           </div>
 
-          {/* FIX 6: Show pending image indicator so user knows to click Save */}
           {imgFile && (
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-center gap-2">
               <Camera size={13} />
@@ -313,22 +316,28 @@ export default function Profile() {
               <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 className="input pl-9 opacity-60 cursor-not-allowed"
-                value={user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                value={user?.date_joined
+                  ? new Date(user.date_joined).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : '—'}
                 disabled
               />
             </div>
           </div>
 
           <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
-            {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Edit3 size={14} /> Save Changes</>}
+            {saving
+              ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <><Edit3 size={14} /> Save Changes</>
+            }
           </button>
         </form>
       )}
 
-      {/* Academic Info */}
+      {/* ── Academic Info ── */}
       {tab === 'academic' && (
         <form onSubmit={handleAcademic} className="space-y-4">
 
+          {/* Institution */}
           <div className="card space-y-5">
             <div className="flex items-center gap-2 mb-1">
               <Building size={15} className="text-primary-600" />
@@ -339,7 +348,12 @@ export default function Profile() {
               <label className="label">Institution name</label>
               <div className="relative">
                 <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input className="input pl-9" placeholder="Your school, college, or coaching center" value={form.institution} onChange={set('institution')} />
+                <input
+                  className="input pl-9"
+                  placeholder="Your school, college, or coaching center"
+                  value={form.institution}
+                  onChange={set('institution')}
+                />
               </div>
             </div>
 
@@ -347,11 +361,17 @@ export default function Profile() {
               <label className="label">District / Location</label>
               <div className="relative">
                 <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input className="input pl-9" placeholder="e.g. Dhaka, Chittagong..." value={form.district} onChange={set('district')} />
+                <input
+                  className="input pl-9"
+                  placeholder="e.g. Dhaka, Chittagong..."
+                  value={form.district}
+                  onChange={set('district')}
+                />
               </div>
             </div>
           </div>
 
+          {/* Academic Level */}
           <div className="card space-y-5">
             <div className="flex items-center gap-2 mb-1">
               <GraduationCap size={15} className="text-primary-600" />
@@ -364,7 +384,9 @@ export default function Profile() {
                 <GraduationCap size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <select className="input pl-9 pr-9 appearance-none" value={form.class_level} onChange={set('class_level')}>
                   {CLASS_LEVEL_OPTIONS.map(({ value, label, group }) => (
-                    <option key={value} value={value}>{group ? `${group} — ${label}` : label}</option>
+                    <option key={value} value={value}>
+                      {group ? `${group} — ${label}` : label}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -398,6 +420,7 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Exam Details */}
           <div className="card space-y-5">
             <div className="flex items-center gap-2 mb-1">
               <BookOpen size={15} className="text-primary-600" />
@@ -408,11 +431,21 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Roll number</label>
-                <input className="input" placeholder="Your roll no." value={form.roll_number} onChange={set('roll_number')} />
+                <input
+                  className="input"
+                  placeholder="Your roll no."
+                  value={form.roll_number}
+                  onChange={set('roll_number')}
+                />
               </div>
               <div>
                 <label className="label">Registration no.</label>
-                <input className="input" placeholder="Reg. number" value={form.reg_number} onChange={set('reg_number')} />
+                <input
+                  className="input"
+                  placeholder="Reg. number"
+                  value={form.reg_number}
+                  onChange={set('reg_number')}
+                />
               </div>
             </div>
 
@@ -432,12 +465,15 @@ export default function Profile() {
           </div>
 
           <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
-            {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Edit3 size={14} /> Save Academic Info</>}
+            {saving
+              ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <><Edit3 size={14} /> Save Academic Info</>
+            }
           </button>
         </form>
       )}
 
-      {/* Change Password */}
+      {/* ── Change Password ── */}
       {tab === 'password' && (
         <form onSubmit={handlePassword} className="card space-y-5">
           <div className="flex items-center gap-2 mb-1">
@@ -478,7 +514,10 @@ export default function Profile() {
           ))}
 
           <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
-            {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Shield size={14} /> Update Password</>}
+            {saving
+              ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <><Shield size={14} /> Update Password</>
+            }
           </button>
         </form>
       )}
