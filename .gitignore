@@ -74,3 +74,9 @@ htmlcov/
 *.pid
 *.seed
 *.pid.lock
+
+
+# git ignore for user profile images and signals
+
+users/profile_images/
+users/signals.py
