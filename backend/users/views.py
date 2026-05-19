@@ -24,17 +24,15 @@ def _get_tokens(user):
 
 
 class RegisterView(APIView):
-    """
-    POST /api/users/register/
-    Public registration for Student, Coaching Center Owner, University Admin.
-    Returns full profile + JWT tokens.
-    """
+    
+
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        print("EEEEEEEEEEEE Registered user:", user.email)
         return Response(
             {
                 "user":   UserProfileSerializer(user, context={"request": request}).data,
@@ -103,11 +101,7 @@ class ProfileView(APIView):
 
 
 class ProfileUpdateView(APIView):
-    """
-    PATCH /api/users/profile/update/
-    Update: first_name, last_name, phone, profile_image, class_level, institution.
-    Returns updated full profile.
-    """
+   
     permission_classes = [IsAuthenticated]
     parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
@@ -124,9 +118,6 @@ class ProfileUpdateView(APIView):
             UserProfileSerializer(user, context={"request": request}).data,
             status=status.HTTP_200_OK,
         )
-
-
-# ── Password ──────────────────────────────────────────────────────────────────
 
 class ChangePasswordView(APIView):
     """
@@ -147,8 +138,6 @@ class ChangePasswordView(APIView):
             status=status.HTTP_200_OK,
         )
 
-
-# ── Wallet ────────────────────────────────────────────────────────────────────
 
 class WalletView(APIView):
     """

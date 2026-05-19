@@ -79,6 +79,7 @@ class UserAdmin(BaseUserAdmin):
     profile_image_preview.short_description = "Preview"
 
 
+
 class WalletTransactionInline(admin.TabularInline):
     model           = WalletTransaction
     extra           = 0
@@ -86,6 +87,7 @@ class WalletTransactionInline(admin.TabularInline):
     can_delete      = False
     max_num         = 20
     ordering        = ("-created_at",)
+
 
 
 @admin.register(Wallet)
@@ -105,7 +107,6 @@ class WalletTransactionAdmin(admin.ModelAdmin):
     ordering        = ("-created_at",)
 
     def has_add_permission(self, request):
-        return False  # Transactions should only be created via code
-
+        return False  
     def has_delete_permission(self, request, obj=None):
-        return False  # Never allow deletion of financial records
+        return False  

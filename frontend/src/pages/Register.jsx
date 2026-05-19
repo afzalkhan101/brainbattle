@@ -4,26 +4,53 @@ import { useAuth } from '../context/AuthContext'
 import { GraduationCap, Mail, Lock, User, Eye, EyeOff, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const CLASS_LEVEL_OPTIONS = [
+  { value: '',          label: 'Select' },
+  { value: 'class_6',  label: 'Class 6' },
+  { value: 'class_7',  label: 'Class 7' },
+  { value: 'class_8',  label: 'Class 8' },
+  { value: 'class_9',  label: 'Class 9' },
+  { value: 'class_10', label: 'Class 10' },
+  { value: 'ssc',      label: 'SSC' },
+  { value: 'hsc',      label: 'HSC' },
+  { value: 'admission',label: 'Admission' },
+]
+
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [showPass, setShowPass]           = useState(false)
+  const [showConfirm, setShowConfirm]     = useState(false)
+  const [loading, setLoading]             = useState(false)
   const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '', password: '',
-    phone: '', role: 'student', class_level: '', referral_code: ''
+    first_name:       '',
+    last_name:        '',
+    email:            '',
+    password:         '',
+    password_confirm: '',
+    phone:            '',
+    role:             'student',
+    class_level:      '',
+    referred_by_code: '',
   })
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (form.password !== form.password_confirm) {
+      toast.error('Passwords do not match')
+      return
+    }
+
     setLoading(true)
     try {
       const payload = { ...form }
-      if (!payload.phone) delete payload.phone
-      if (!payload.class_level) delete payload.class_level
-      if (!payload.referral_code) delete payload.referral_code
+      if (!payload.phone)            delete payload.phone
+      if (!payload.class_level)      delete payload.class_level
+      if (!payload.referred_by_code) delete payload.referred_by_code
+
       await register(payload)
       navigate('/dashboard')
       toast.success('Account created!')
@@ -41,6 +68,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex">
+      {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-600 to-primary-800 flex-col justify-center items-center p-12 text-white">
         <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
           <GraduationCap size={32} />
@@ -51,6 +79,7 @@ export default function Register() {
         </p>
       </div>
 
+      {/* Form */}
       <div className="flex-1 flex flex-col justify-center items-center p-8 overflow-y-auto">
         <div className="w-full max-w-sm py-6">
           <div className="flex lg:hidden items-center gap-2 mb-6">
@@ -64,6 +93,8 @@ export default function Register() {
           <p className="text-slate-500 text-sm mb-6">Fill in your details to get started</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Name */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">First name</label>
@@ -78,6 +109,7 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Email */}
             <div>
               <label className="label">Email</label>
               <div className="relative">
@@ -86,6 +118,7 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Password */}
             <div>
               <label className="label">Password</label>
               <div className="relative">
@@ -97,13 +130,35 @@ export default function Register() {
                   value={form.password}
                   onChange={set('password')}
                   required
+                  minLength={8}
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                   {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
             </div>
 
+            {/* Confirm Password */}
+            <div>
+              <label className="label">Confirm password</label>
+              <div className="relative">
+                <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  className="input pl-9 pr-10"
+                  placeholder="Re-enter password"
+                  value={form.password_confirm}
+                  onChange={set('password_confirm')}
+                  required
+                  minLength={8}
+                />
+                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Role & Class Level */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Role</label>
@@ -116,14 +171,14 @@ export default function Register() {
               <div>
                 <label className="label">Class Level</label>
                 <select className="input" value={form.class_level} onChange={set('class_level')}>
-                  <option value="">Select</option>
-                  <option value="ssc">SSC</option>
-                  <option value="hsc">HSC</option>
-                  <option value="admission">Admission</option>
+                  {CLASS_LEVEL_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
+            {/* Phone */}
             <div>
               <label className="label">Phone <span className="text-slate-400 font-normal">(optional)</span></label>
               <div className="relative">
@@ -132,13 +187,17 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Referral */}
             <div>
               <label className="label">Referral Code <span className="text-slate-400 font-normal">(optional)</span></label>
-              <input className="input" placeholder="Enter referral code" value={form.referral_code} onChange={set('referral_code')} />
+              <input className="input" placeholder="Enter referral code" value={form.referred_by_code} onChange={set('referred_by_code')} />
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3 mt-2">
-              {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Create account'}
+              {loading
+                ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : 'Create account'
+              }
             </button>
           </form>
 
