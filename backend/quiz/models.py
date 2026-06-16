@@ -2,7 +2,6 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
-
 CLASS_LEVEL_CHOICES = [
     ('class_6',   'Class 6'),
     ('class_7',   'Class 7'),
@@ -28,7 +27,6 @@ class Subject(models.Model):
     def __str__(self):
         return f"{self.name} — {self.get_class_level_display()}"
     
-
 
 class Quiz(models.Model):
     title            = models.CharField(max_length=255)
