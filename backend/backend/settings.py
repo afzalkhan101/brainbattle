@@ -5,10 +5,6 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# ============================================================
-# Security
-# ============================================================
-
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
     'django-insecure-change-this-in-production'
@@ -45,7 +41,6 @@ INSTALLED_APPS = [
 
     # Local
     'users',
-    'university',
     'quiz',
 ]
 
@@ -193,10 +188,8 @@ STATIC_URL = 'static/'
 # Filesystem:
 # BASE_DIR/users/profile_images/7/image.jpg
 
-MEDIA_URL = '/'
-
-MEDIA_ROOT = BASE_DIR
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================================================
 # Default Primary Key

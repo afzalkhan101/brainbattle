@@ -16,13 +16,10 @@ urlpatterns = [
         name='token-refresh'
     ),
 
-    # Resources
-    path('api/universities/', include('university.urls')),
     path('api/quizzes/', include('quiz.urls')),
 ]
 
 
-# Serve uploaded files during development
 if settings.DEBUG:
     urlpatterns += static(
         settings.MEDIA_URL,
