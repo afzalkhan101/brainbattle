@@ -6,7 +6,6 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import Universities from './pages/Universities'
 import Quizzes from './pages/Quizzes'
 import QuizDetail from './pages/QuizDetail'
 import MyAttempts from './pages/MyAttempts'
@@ -23,7 +22,6 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"    element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
-          <Route path="/universities" element={<PrivateRoute><Layout><Universities /></Layout></PrivateRoute>} />
           <Route path="/quizzes"      element={<PrivateRoute><Layout><Quizzes /></Layout></PrivateRoute>} />
           <Route path="/quizzes/:id"  element={<PrivateRoute><Layout><QuizDetail /></Layout></PrivateRoute>} />
           <Route path="/my-attempts"  element={<PrivateRoute><Layout><MyAttempts /></Layout></PrivateRoute>} />

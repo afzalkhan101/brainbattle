@@ -18,7 +18,6 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/universities", label: "Universities", icon: GraduationCap },
   { to: "/quizzes", label: "Quizzes", icon: BookOpen },
   { to: "/my-attempts", label: "My Attempts", icon: ClipboardList },
   { to: "/wallet", label: "Wallet", icon: Wallet },
