@@ -1,6 +1,8 @@
 from django.contrib import admin
 from .models import Subject, Quiz, Question, Answer, QuizAttempt, AttemptAnswer
 
+
+
 class AnswerInline(admin.TabularInline):
     model = Answer
     extra = 2
