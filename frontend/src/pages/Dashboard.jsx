@@ -1,155 +1,61 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
-import { GraduationCap, BookOpen, Wallet, ClipboardList, ChevronRight } from 'lucide-react'
-
-function StatCard({ icon: Icon, label, value, color, to, loading }) {
-  return (
-    <Link
-      to={to}
-      className="card flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
-    >
-      <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={20} />
-      </div>
-      <div className="min-w-0">
-        {loading ? (
-          <div className="h-7 w-14 rounded-md bg-slate-100 animate-pulse" />
-        ) : (
-          <p className="text-2xl font-bold text-slate-900 tabular-nums">{value}</p>
-        )}
-        <p className="text-sm text-slate-500">{label}</p>
-      </div>
-      <ChevronRight size={16} className="ml-auto shrink-0 text-slate-300" />
-    </Link>
-  )
-}
-
-const QUICK_ACTIONS = [
-  { label: 'Take a quiz', sub: 'Test your knowledge', to: '/quizzes', icon: BookOpen },
-  { label: 'View attempts', sub: 'Review your quiz history', to: '/my-attempts', icon: ClipboardList },
-]
-
-const PROFILE_FIELDS = [
-  { label: 'Role', get: (u) => u?.role?.replace(/_/g, ' ') },
-  { label: 'Class level', get: (u) => u?.class_level?.toUpperCase() },
-  { label: 'Institution', get: (u) => u?.institution },
-  { label: 'Referral code', get: (u) => u?.referral_code },
-]
+import { isAdmin, errorText } from './admin/shared'
+import StudentProgress from '../components/progress/StudentProgress'
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const [stats, setStats] = useState({ quizzes: null, attempts: null, wallet: null })
+  const admin = isAdmin(user)
+  const [period, setPeriod] = useState('7')
+  const [progress, setProgress] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [revision, setRevision] = useState(0)
+  const [extras, setExtras] = useState({ available: null, wallet: null })
 
   useEffect(() => {
-    let cancelled = false
+    if (admin) return
+    const controller = new AbortController()
+    setLoading(true)
+    setError('')
+    api.get(`/api/quizzes/progress/?period=${period}&timezone=Asia%2FDhaka`, { signal: controller.signal })
+      .then(({ data }) => { if (!controller.signal.aborted) setProgress(data) })
+      .catch((err) => { if (!controller.signal.aborted) setError(errorText(err)) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [user.id, admin, period, revision])
 
-    Promise.allSettled([
-      api.get('/api/quizzes/'),
-      api.get('/api/quizzes/my-attempts/'),
-      api.get('/api/auth/wallet/'),
-    ]).then(([quizzes, attempts, wallet]) => {
-      if (cancelled) return
-      setStats({
-        quizzes: quizzes.status === 'fulfilled' ? quizzes.value.data.count ?? quizzes.value.data.length : 0,
-        attempts: attempts.status === 'fulfilled' ? attempts.value.data.count ?? attempts.value.data.length : 0,
-        wallet: wallet.status === 'fulfilled' ? wallet.value.data.balance : 0,
+  useEffect(() => {
+    if (admin) return
+    let active = true
+    Promise.allSettled([api.get('/api/quizzes/'), api.get('/api/auth/wallet/')])
+      .then(([quizzes, wallet]) => {
+        if (active) setExtras({ available: quizzes.status === 'fulfilled' ? quizzes.value.data.count : null, wallet: wallet.status === 'fulfilled' ? wallet.value.data.balance : null })
       })
-      setLoading(false)
-    })
+    return () => { active = false }
+  }, [user.id, admin])
 
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  useEffect(() => {
+    if (admin) return
+    const dayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date())
+    let lastDay = dayKey()
+    const timer = setInterval(() => {
+      const current = dayKey()
+      if (current !== lastDay) { lastDay = current; setRevision((n) => n + 1) }
+    }, 60000)
+    return () => clearInterval(timer)
+  }, [admin])
 
-  const hour = new Date().getHours()
+  if (admin) return <Navigate to="/admin" replace />
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: 'numeric', hourCycle: 'h23' }).format(new Date()))
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-
-  return (
-    <div>
-      <div className="mb-8">
-        <p className="text-sm text-slate-400">{today}</p>
-        <h1 className="text-2xl font-bold text-slate-900 mt-1">
-          {greeting}, {user?.first_name}
-        </h1>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          icon={BookOpen}
-          label="Quizzes available"
-          value={stats.quizzes}
-          loading={loading}
-          color="bg-violet-50 text-violet-600"
-          to="/quizzes"
-        />
-        <StatCard
-          icon={ClipboardList}
-          label="My attempts"
-          value={stats.attempts}
-          loading={loading}
-          color="bg-emerald-50 text-emerald-600"
-          to="/my-attempts"
-        />
-        <StatCard
-          icon={Wallet}
-          label="Wallet balance"
-          value={stats.wallet !== null ? `৳${stats.wallet}` : null}
-          loading={loading}
-          color="bg-amber-50 text-amber-600"
-          to="/wallet"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <h3 className="font-semibold text-slate-900 mb-5">Quick actions</h3>
-          <div className="space-y-1">
-            {QUICK_ACTIONS.map(({ label, sub, to, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
-                  <Icon size={16} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{label}</p>
-                  <p className="text-xs text-slate-400">{sub}</p>
-                </div>
-                <ChevronRight size={14} className="ml-auto text-slate-300" />
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
-              <GraduationCap size={16} />
-            </div>
-            <h3 className="font-semibold text-slate-900">Your profile</h3>
-          </div>
-          <div className="space-y-3">
-            {PROFILE_FIELDS.map(({ label, get }) => (
-              <div key={label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                <span className="text-sm text-slate-500">{label}</span>
-                <span className="text-sm font-medium text-slate-800 capitalize text-right">
-                  {get(user) || 'Not set'}
-                </span>
-              </div>
-            ))}
-          </div>
-          <Link to="/profile" className="btn-secondary w-full justify-center mt-4 text-xs">
-            Edit profile
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
+  const today = new Intl.DateTimeFormat('en', { timeZone: 'Asia/Dhaka', weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())
+  return <div>
+    <div className="mb-7"><p className="text-sm text-slate-400">{today}</p><h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2">{greeting}, {user.first_name || 'student'}</h1><p className="text-sm text-slate-500 mt-2">See how you are improving, one quiz at a time.</p></div>
+    {error ? <div className="card text-center py-12" role="alert"><p className="font-semibold">Could not load your progress</p><p className="text-sm text-slate-500 mt-2">{error}</p><button className="btn-primary mt-5" onClick={() => setRevision((n) => n + 1)}>Try again</button></div>
+      : !progress ? <div className="card text-center py-20 text-slate-400" role="status">Loading your progress…</div>
+      : <StudentProgress progress={progress} period={period} setPeriod={setPeriod} refreshing={loading} available={extras.available} wallet={extras.wallet} />}
+  </div>
 }

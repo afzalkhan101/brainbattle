@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, Wallet, WalletTransaction
+from io import BytesIO
+from django.core.files.base import ContentFile
+from PIL import Image, ImageOps
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -95,6 +98,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "phone",
+            "is_superuser",
             "profile_image",
             # ── Academic ──────────────────────
             "class_level",
@@ -152,6 +156,23 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "exam_year",
             # ──────────────────────────────────
         ]
+
+    def validate_profile_image(self, value):
+        if value is None:
+            return value
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('Choose a photo smaller than 5 MB.')
+        value.seek(0)
+        with Image.open(value) as original:
+            if original.format not in ('JPEG', 'PNG', 'WEBP'):
+                raise serializers.ValidationError('Use a JPG, PNG or WebP photo.')
+            image = ImageOps.exif_transpose(original)
+            image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+            transparent = image.mode in ('RGBA', 'LA') or 'transparency' in image.info
+            image = image.convert('RGBA' if transparent else 'RGB')
+            output = BytesIO()
+            image.save(output, format='PNG' if transparent else 'JPEG', **({} if transparent else {'quality': 90}))
+        return ContentFile(output.getvalue(), name='profile.png' if transparent else 'profile.jpg')
 
     def validate_phone(self, value):
         if value:

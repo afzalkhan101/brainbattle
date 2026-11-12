@@ -1,4 +1,5 @@
 from django.urls import path
+from .progress import StudentProgressView
 from .views import (
     SubjectListCreateView,
     SubjectDetailView,
@@ -10,6 +11,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path('progress/', StudentProgressView.as_view(), name='student-progress'),
     # ── Subjects ──────────────────────────────────────────────────────────────
     path('subjects/',              SubjectListCreateView.as_view(), name='subject-list-create'),
     path('subjects/<int:pk>/',     SubjectDetailView.as_view(),     name='subject-detail'),

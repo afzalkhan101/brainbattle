@@ -11,6 +11,13 @@ import QuizDetail from './pages/QuizDetail'
 import MyAttempts from './pages/MyAttempts'
 import Wallet from './pages/Wallet'
 import Profile from './pages/Profile'
+import AdminRoute from './pages/admin/AdminRoute'
+import AdminDashboard, { QuizManagement, StudentList, ResultsList } from './pages/admin/AdminDashboard'
+import Subjects from './pages/admin/Subjects'
+
+function AdminPage({ children }) {
+  return <PrivateRoute><AdminRoute><Layout>{children}</Layout></AdminRoute></PrivateRoute>
+}
 
 export default function App() {
   return (
@@ -18,6 +25,11 @@ export default function App() {
       <BrowserRouter>
         <Toaster position="top-right" toastOptions={{ style: { fontSize: '14px', borderRadius: '12px' } }} />
         <Routes>
+          <Route path="/admin" element={<AdminPage><AdminDashboard /></AdminPage>} />
+          <Route path="/admin/quizzes" element={<AdminPage><div className="mb-6"><h1 className="page-title">Quizzes</h1><p className="page-subtitle">Create, publish and manage your quizzes.</p></div><QuizManagement /></AdminPage>} />
+          <Route path="/admin/students" element={<AdminPage><div className="mb-6"><h1 className="page-title">Students</h1><p className="page-subtitle">Browse all registered students and their academic details.</p></div><StudentList /></AdminPage>} />
+          <Route path="/admin/results" element={<AdminPage><div className="mb-6"><h1 className="page-title">Results</h1><p className="page-subtitle">Review student performance across all quizzes.</p></div><ResultsList /></AdminPage>} />
+          <Route path="/admin/subjects" element={<AdminPage><Subjects /></AdminPage>} />
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

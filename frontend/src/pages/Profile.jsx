@@ -7,6 +7,7 @@ import {
   CheckCircle, Shield, Award, ChevronDown
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Avatar from '../components/Avatar'
 
 
 const CLASS_LEVEL_OPTIONS = [
@@ -56,11 +57,14 @@ export default function Profile() {
   const [pw, setPw]         = useState({ old_password: '', new_password: '', confirm_password: '' })
   const [imgFile, setImgFile] = useState(null)
   const [preview, setPreview] = useState(user?.profile_image ?? null)
+  const [imageUnavailable, setImageUnavailable] = useState(false)
   const [pwVisible, setPwVisible] = useState({ old: false, new: false, confirm: false })
 
-  // Sync preview when user context updates
   useEffect(() => {
-    if (!imgFile) setPreview(user?.profile_image ?? null)
+    const next = imgFile ? URL.createObjectURL(imgFile) : user?.profile_image ?? null
+    setPreview(next)
+    setImageUnavailable(false)
+    return () => { if (imgFile) URL.revokeObjectURL(next) }
   }, [user?.profile_image, imgFile])
 
   const set  = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -69,9 +73,15 @@ export default function Profile() {
   const handleImagePick = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
+    e.target.value = ''
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Please choose a JPG, PNG or WebP photo.'); return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Please choose a photo smaller than 5 MB.'); return
+    }
     setImgFile(file)
-    setPreview(URL.createObjectURL(file))
+    setTab('profile')
   }
 
   // ── Personal Info ──────────────────────────────────────────────────────────
@@ -85,9 +95,7 @@ export default function Profile() {
       )
       if (imgFile) fd.append('profile_image', imgFile)
 
-      const { data } = await api.patch('/api/auth/profile/update/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const { data } = await api.patch('/api/auth/profile/update/', fd)
       updateUser(data)
       setImgFile(null)
       toast.success('Profile updated!')
@@ -108,9 +116,7 @@ export default function Profile() {
         (k) => fd.append(k, form[k] ?? '')
       )
 
-      const { data } = await api.patch('/api/auth/profile/update/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const { data } = await api.patch('/api/auth/profile/update/', fd)
       updateUser(data)
       toast.success('Academic info updated!')
     } catch (err) {
@@ -144,8 +150,7 @@ export default function Profile() {
     toast.success('Referral code copied!')
   }
 
-  const initials        = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase()
-  const classLevelLabel = CLASS_LEVEL_OPTIONS.find(o => o.value === user?.class_level)?.label ?? ''
+  const classLevelLabel = user?.class_level ? CLASS_LEVEL_OPTIONS.find(o => o.value === user.class_level)?.label ?? '' : ''
   const completionFields = ['first_name', 'last_name', 'phone', 'institution', 'class_level', 'profile_image']
   const filled      = completionFields.filter(f => user?.[f]).length
   const completion  = Math.round((filled / completionFields.length) * 100)
@@ -163,25 +168,20 @@ export default function Profile() {
       <div className="card mb-4">
         <div className="flex items-start gap-5">
           <div className="relative flex-shrink-0">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-bold shadow-sm">
-              {preview
-                ? <img src={preview} alt="avatar" className="w-full h-full object-cover" />
-                : <span>{initials}</span>
-              }
-            </div>
+            <Avatar user={user} src={preview} className="w-24 h-24 rounded-2xl text-2xl shadow-sm" onError={() => setImageUnavailable(true)} />
             <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-primary-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md hover:bg-primary-700 transition-colors">
               <Camera size={13} />
-              <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+              <input type="file" aria-label="Upload profile photo" accept="image/jpeg,image/png,image/webp" disabled={saving} className="hidden" onChange={handleImagePick} />
             </label>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <h2 className="font-bold text-slate-900 text-lg leading-tight">
+                <h2 className="font-bold text-slate-900 text-lg leading-tight break-words">
                   {user?.first_name} {user?.last_name}
                 </h2>
-                <p className="text-sm text-slate-500 mt-0.5">{user?.email}</p>
+                <p className="text-sm text-slate-500 mt-0.5 break-all">{user?.email}</p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 capitalize">
                     <Award size={10} />
@@ -232,6 +232,8 @@ export default function Profile() {
           </div>
         </div>
 
+        <p className="text-xs text-slate-400 mt-4">JPG, PNG or WebP · up to 5 MB. Choose a photo, then save your changes.</p>
+        {imageUnavailable && <p className="text-xs text-amber-700 mt-2" role="status">This photo could not be loaded. Please upload it again.</p>}
         {(user?.institution || user?.district) && (
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-4 flex-wrap">
             {user?.institution && (
@@ -278,7 +280,8 @@ export default function Profile() {
           {imgFile && (
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-center gap-2">
               <Camera size={13} />
-              New photo selected — click <strong>Save Changes</strong> to upload it.
+              <span>New photo selected — click <strong>Save Changes</strong> to upload it.</span>
+              <button type="button" disabled={saving} onClick={() => setImgFile(null)} className="ml-auto underline shrink-0">Discard photo</button>
             </div>
           )}
 

@@ -3,6 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import { MdOutlineArrowBack } from "react-icons/md";
 import {
   LayoutDashboard,
+  Users,
+  ChartNoAxesColumn,
+  Settings,
   GraduationCap,
   BookOpen,
   ClipboardList,
@@ -14,7 +17,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import Avatar from "./Avatar";
 import toast from "react-hot-toast";
+import { isAdmin } from "../pages/admin/shared";
+import { useLocation } from "react-router-dom";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -27,6 +33,17 @@ const navItems = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const admin = isAdmin(user);
+  const links = admin ? [
+    { to: '/admin', label: 'Overview', icon: LayoutDashboard },
+    { to: '/admin/quizzes', label: 'Quizzes', icon: BookOpen },
+    { to: '/admin/students', label: 'Students', icon: Users },
+    { to: '/admin/results', label: 'Results', icon: ChartNoAxesColumn },
+    { to: '/admin/subjects', label: 'Subjects', icon: GraduationCap },
+    { to: '/profile', label: 'Settings', icon: Settings },
+  ] : navItems;
+  const pageLabel = links.find((item) => item.to === location.pathname)?.label || 'Overview';
 
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -37,9 +54,6 @@ export default function Layout({ children }) {
     navigate("/login");
   };
 
-  const initials = user
-    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase()
-    : "U";
 
   return (
     <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
@@ -53,9 +67,7 @@ export default function Layout({ children }) {
         <div className="h-16 flex items-center px-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             {!collapsed && (
-              <span className="font-bold text-slate-900 text-lg">
-                EduPortal
-              </span>
+              <div><span className="font-bold text-slate-900 text-lg flex items-center gap-2"><GraduationCap size={24} className="text-primary-600" />Brain Battle</span>{admin && <span className="text-[10px] tracking-[0.2em] text-slate-400 pl-8">ADMIN PANEL</span>}</div>
             )}
 
             <div
@@ -81,9 +93,11 @@ export default function Layout({ children }) {
 
         {/* NAV */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {links.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
+              end={to === "/admin"}
+              title={label}
               to={to}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
@@ -106,9 +120,7 @@ export default function Layout({ children }) {
         {/* USER */}
         <div className="p-4 border-t border-slate-100">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-              {initials}
-            </div>
+            <Avatar user={user} className="w-8 h-8 rounded-full text-xs" />
 
             {!collapsed && (
               <div className="flex-1 min-w-0">
@@ -142,7 +154,7 @@ export default function Layout({ children }) {
 
       {/* MAIN */}
       <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300
+        className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300
         ${collapsed ? "lg:ml-20" : "lg:ml-64"}`}
       >
         {/* HEADER */}
@@ -154,14 +166,13 @@ export default function Layout({ children }) {
             <Menu size={20} />
           </button>
 
+          {admin && <div className="text-sm text-slate-400 flex gap-3"><span>Admin</span><span>/</span><span className="font-semibold text-slate-800">{pageLabel}</span></div>}
           <div className="ml-auto flex items-center gap-3">
             <span className="text-sm text-slate-500 hidden sm:block">
               {user?.email}
             </span>
 
-            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-              {initials}
-            </div>
+            <Avatar user={user} className="w-8 h-8 rounded-full text-xs" />
           </div>
         </header>
 

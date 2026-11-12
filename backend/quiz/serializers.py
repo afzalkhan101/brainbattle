@@ -82,8 +82,7 @@ class QuizListSerializer(serializers.ModelSerializer):
             return None
         return (
             getattr(obj.created_by, 'full_name', None)
-            or obj.created_by.get_full_name()
-            or obj.created_by.username
+            or obj.created_by.email
         )
 
     def get_question_count(self, obj):
@@ -119,8 +118,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             return None
         return (
             getattr(obj.created_by, 'full_name', None)
-            or obj.created_by.get_full_name()
-            or obj.created_by.username
+            or obj.created_by.email
         )
 
 

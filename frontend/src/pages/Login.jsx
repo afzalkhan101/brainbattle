@@ -30,7 +30,7 @@ export default function Login() {
         <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
           <GraduationCap size={32} />
         </div>
-        <h1 className="text-4xl font-bold mb-3">EduPortal</h1>
+        <h1 className="text-4xl font-bold mb-3">Brain Battle</h1>
         <p className="text-primary-200 text-center max-w-sm text-lg">
           Your complete platform for university discovery and knowledge assessment.
         </p>
@@ -49,7 +49,7 @@ export default function Login() {
             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
               <GraduationCap size={16} className="text-white" />
             </div>
-            <span className="font-bold text-xl">EduPortal</span>
+            <span className="font-bold text-xl">Brain Battle</span>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h2>
