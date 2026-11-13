@@ -3,7 +3,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
-from .models import Quiz, QuizAttempt, Question, Answer
+from .models import Quiz, QuizAttempt, Question, Answer, Subject
 from .progress import build_progress
 
 UTC = dt_timezone.utc
@@ -13,9 +13,10 @@ TZ = ZoneInfo('Asia/Dhaka')
 
 class StudentProgressTests(APITestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user('progress@example.com', 'test-password')
-        self.other = get_user_model().objects.create_user('other@example.com', 'test-password')
-        self.quiz = Quiz.objects.create(title='Progress quiz')
+        self.user = get_user_model().objects.create_user('progress@example.com', 'test-password', class_level='hsc')
+        self.other = get_user_model().objects.create_user('other@example.com', 'test-password', class_level='hsc')
+        subject = Subject.objects.create(name='Physics', slug='progress-physics', class_level='hsc')
+        self.quiz = Quiz.objects.create(title='Progress quiz', subject=subject)
         self.client.force_authenticate(self.user)
 
     def attempt(self, date, score=8, total=10, user=None):

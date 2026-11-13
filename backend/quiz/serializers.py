@@ -213,7 +213,7 @@ class AttemptAnswerSerializer(serializers.ModelSerializer):
         ]
 
     def get_selected_text(self, obj):
-        return obj.selected_answer.answer_text if obj.selected_answer else 'Skipped'
+        return obj.selected_answer.answer_text if obj.selected_answer and obj.selected_answer.question_id == obj.question_id else 'Skipped'
 
     def get_correct_text(self, obj):
         correct = obj.question.answers.filter(is_correct=True).first()

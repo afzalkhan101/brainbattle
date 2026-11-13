@@ -65,7 +65,8 @@ export default function Profile() {
     user,
     updateUser
   } = useAuth();
-  const [tab, setTab] = useState('profile');
+  const [tab, setTab] = useState(user?.role === 'student' && !user?.class_level ? 'academic' : 'profile');
+  const classLocked = user?.role === 'student' && !user.is_superuser && Boolean(user.class_level);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     first_name: user?.first_name ?? '',
@@ -209,6 +210,7 @@ export default function Profile() {
         <p className="page-subtitle">{t("Manage your personal and academic information")}</p>
       </div>
 
+      {user?.role === 'student' && !user.is_superuser && <div className="card mb-4 text-sm"><p className="font-semibold">{t(user.class_level ? 'Your content is limited to your enrolled class.' : 'Choose your class to unlock your quizzes and practice.')}</p><p className="text-slate-500 mt-2">{t('After enrollment, only an administrator can change your class.')}</p>{!user.class_level && <button className="btn-primary mt-3" onClick={() => setTab('academic')}>{t('Set my class')}</button>}</div>}
       {/* Profile summary card */}
       <div className="card mb-4">
         <div className="flex items-start gap-5">
@@ -390,8 +392,8 @@ export default function Profile() {
               <label className="label">{t("Class / Level")}</label>
               <div className="relative">
                 <GraduationCap size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select className="input pl-9 pr-9 appearance-none" value={form.class_level} onChange={set('class_level')}>
-                  {CLASS_LEVEL_OPTIONS.map(({
+                <select aria-label={t("Class / Level")} disabled={classLocked} required={user?.role === "student"} className="input pl-9 pr-9 appearance-none" value={form.class_level} onChange={set('class_level')}>
+                  {CLASS_LEVEL_OPTIONS.filter(option => !classLocked || option.value === user.class_level).map(({
                 value,
                 label,
                 group

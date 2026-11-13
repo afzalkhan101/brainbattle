@@ -62,22 +62,35 @@ export function QuizManagement({
       if (!busy) setDeleting(null);
     }}><p className="text-slate-600">{t("Delete ")}<strong>{t(deleting.title)}</strong>{t("? This permanently removes its questions and all student results for this quiz.")}</p>{deleteError && <p className="text-red-600 mt-3" role="alert">{t(deleteError)}</p>}<div className="flex justify-end gap-3 mt-6"><button disabled={busy} className="btn-secondary" onClick={() => setDeleting(null)}>{t("Cancel")}</button><button disabled={busy} className="btn-danger" onClick={remove}>{t(busy ? 'Deleting…' : 'Delete quiz')}</button></div></Modal>}</>;
 }
+function StudentClassEditor({ student, onClose, onSaved }) {
+  const { t } = usePreferences();
+  const [level, setLevel] = useState(student.class_level || '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function save(event) {
+    event.preventDefault(); setBusy(true); setError('');
+    try { await api.patch(`/api/admin/students/${student.id}/class/`, { class_level: level }); toast.success(t('Student class updated')); onSaved(); }
+    catch (error) { setError(errorText(error)); } finally { setBusy(false); }
+  }
+  return <Modal title={t('Change student class')} onClose={() => { if (!busy) onClose(); }}><form className="space-y-4" onSubmit={save}><p className="text-sm text-slate-500">{student.full_name} · {student.email}</p><p className="text-xs text-slate-400">{t('Changing class immediately changes all learning access. Earlier-class history stays stored but is hidden from the student.')}</p>{error && <p role="alert" className="text-red-600">{error}</p>}<select aria-label={t('Class')} className="input" required value={level} onChange={e => setLevel(e.target.value)}><option value="">{t('Select')}</option>{['class_6','class_7','class_8','class_9','class_10','ssc','hsc','admission'].map(v => <option key={v} value={v}>{t(v.replace('_',' ').toUpperCase())}</option>)}</select><div className="flex justify-end gap-3"><button type="button" className="btn-secondary" disabled={busy} onClick={onClose}>{t('Cancel')}</button><button className="btn-primary" disabled={busy}>{t(busy ? 'Saving…' : 'Save changes')}</button></div></form></Modal>;
+}
 export function StudentList({
   compact = false
 }) {
   const {
     t
   } = usePreferences();
+  const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const list = useAdminList('students', search, `&class_level=${level}`);
-  return <section className="admin-panel"><div className="p-5 flex flex-wrap justify-between items-center gap-4"><h2 className="text-lg font-bold">{t("Students")}</h2>{compact && <Link to="/admin/students" className="flex items-center gap-1 text-sm text-primary-600 font-semibold">{t("View all students ")}<ArrowRight size={15} /></Link>}</div><div className="px-5 pb-4 flex flex-wrap gap-3"><SearchBox value={search} onChange={v => {
+  return <><section className="admin-panel"><div className="p-5 flex flex-wrap justify-between items-center gap-4"><h2 className="text-lg font-bold">{t("Students")}</h2>{compact && <Link to="/admin/students" className="flex items-center gap-1 text-sm text-primary-600 font-semibold">{t("View all students ")}<ArrowRight size={15} /></Link>}</div><div className="px-5 pb-4 flex flex-wrap gap-3"><SearchBox value={search} onChange={v => {
         setSearch(v);
         list.setPage(1);
       }} placeholder={t("Search students…")} />{!compact && <select aria-label={t("Filter students by class")} className="input bg-white w-auto" value={level} onChange={e => {
         setLevel(e.target.value);
         list.setPage(1);
-      }}><option value="">{t("All classes")}</option>{['class_6', 'class_7', 'class_8', 'class_9', 'class_10', 'ssc', 'hsc', 'admission'].map(l => <option key={l} value={l}>{t(l.replace('_', ' ').toUpperCase())}</option>)}</select>}</div><ListState list={list}><div className="overflow-x-auto px-5 pb-4"><table className="admin-table"><thead><tr><th>{t("Name")}</th><th>{t("Email")}</th><th>{t("Class")}</th><th>{t("Institution")}</th><th>{t("Status")}</th>{!compact && <><th>{t("Attempts")}</th><th>{t("Joined")}</th></>}</tr></thead><tbody>{(compact ? list.results.slice(0, 3) : list.results).map(s => <tr key={s.id}><td className="font-semibold text-slate-900">{s.full_name || t('Unnamed student')}</td><td>{s.email}</td><td className="uppercase">{t(s.class_level?.replace('_', ' ') || '—')}</td><td>{s.institution || '—'}</td><td><span className={s.is_active ? 'badge-green' : 'badge-slate'}>{"● \xA0"}{t(s.is_active ? 'Active' : 'Inactive')}</span></td>{!compact && <><td>{t(s.attempts_count)}</td><td>{t(dateText(s.date_joined))}</td></>}</tr>)}</tbody></table></div></ListState>{!compact && <Pagination list={list} />}</section>;
+      }}><option value="">{t("All classes")}</option>{['class_6', 'class_7', 'class_8', 'class_9', 'class_10', 'ssc', 'hsc', 'admission'].map(l => <option key={l} value={l}>{t(l.replace('_', ' ').toUpperCase())}</option>)}</select>}</div><ListState list={list}><div className="overflow-x-auto px-5 pb-4"><table className="admin-table"><thead><tr><th>{t("Name")}</th><th>{t("Email")}</th><th>{t("Class")}</th><th>{t("Institution")}</th><th>{t("Status")}</th>{!compact && <><th>{t("Attempts")}</th><th>{t("Joined")}</th><th>{t("Actions")}</th></>}</tr></thead><tbody>{(compact ? list.results.slice(0, 3) : list.results).map(s => <tr key={s.id}><td className="font-semibold text-slate-900">{s.full_name || t('Unnamed student')}</td><td>{s.email}</td><td className="uppercase">{t(s.class_level?.replace('_', ' ') || '—')}</td><td>{s.institution || '—'}</td><td><span className={s.is_active ? 'badge-green' : 'badge-slate'}>{"● \xA0"}{t(s.is_active ? 'Active' : 'Inactive')}</span></td>{!compact && <><td>{t(s.attempts_count)}</td><td>{t(dateText(s.date_joined))}</td><td><button className="btn-secondary text-xs" onClick={() => setEditing(s)}>{t("Change student class")}</button></td></>}</tr>)}</tbody></table></div></ListState>{!compact && <Pagination list={list} />}</section>{editing && <StudentClassEditor student={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); list.refresh(); }} />}</>;
 }
 export function ResultsList() {
   const {

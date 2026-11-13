@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { usePreferences } from "../context/Preferences";
 import { useEffect, useState, useCallback } from 'react';
 import api from '../api/axios';
@@ -243,11 +244,14 @@ export default function Quizzes() {
   const {
     t
   } = usePreferences();
+  const { user } = useAuth();
+  const enrolled = user?.role === 'student' && !user?.is_superuser ? user.class_level : '';
   const [list, setList] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [classLevel, setClassLevel] = useState('');
+  const [selectedClass, setClassLevel] = useState('');
+  const classLevel = enrolled || selectedClass;
   const [subjectId, setSubjectId] = useState('');
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   useEffect(() => {
@@ -283,7 +287,7 @@ export default function Quizzes() {
   }, [fetchList]);
   const activeClassLabel = CLASS_LEVELS.find(c => c.value === classLevel)?.label;
   const activeSubjectLabel = subjects.find(s => String(s.id) === subjectId)?.name;
-  const hasFilters = classLevel || subjectId || search;
+  const hasFilters = (!enrolled && classLevel) || subjectId || search;
   const clearAll = () => {
     setSearch('');
     setClassLevel('');
@@ -318,9 +322,9 @@ export default function Quizzes() {
           </div>
 
           {/* Class select */}
-          <select className="input text-sm w-full md:w-44" value={classLevel} onChange={e => setClassLevel(e.target.value)}>
-            <option value="">{t("All Classes")}</option>
-            {CLASS_LEVELS.map(c => <option key={c.value} value={c.value}>{t(c.label)}</option>)}
+          <select disabled={Boolean(enrolled)} className="input text-sm w-full md:w-44" value={classLevel} onChange={e => setClassLevel(e.target.value)}>
+            {!enrolled && <option value="">{t("All Classes")}</option>}
+            {CLASS_LEVELS.filter(c => !enrolled || c.value === enrolled).map(c => <option key={c.value} value={c.value}>{t(c.label)}</option>)}
           </select>
 
           {/* Subject select (conditional) */}

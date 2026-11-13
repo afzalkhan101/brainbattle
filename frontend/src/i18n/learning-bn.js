@@ -1,4 +1,14 @@
 export const learningBn = {
+  'Submit each question from this quiz at most once.': 'এই কুইজের প্রতিটি প্রশ্ন একবারের বেশি জমা দেবেন না।',
+  'Choose an answer belonging to this question.': 'এই প্রশ্নের একটি উত্তর বেছে নিন।',
+  'Your content is limited to your enrolled class.': 'শুধু আপনার নির্ধারিত শ্রেণির বিষয়বস্তু দেখা যাবে।',
+  'Choose your class to unlock your quizzes and practice.': 'কুইজ ও অনুশীলন দেখতে আগে আপনার শ্রেণি বেছে নিন।',
+  'After enrollment, only an administrator can change your class.': 'শ্রেণি নির্ধারণের পর শুধু অ্যাডমিন সেটি পরিবর্তন করতে পারবেন।',
+  'Set my class': 'আমার শ্রেণি নির্ধারণ করুন', 'Change student class': 'শিক্ষার্থীর শ্রেণি পরিবর্তন', 'Student class updated': 'শিক্ষার্থীর শ্রেণি পরিবর্তন হয়েছে',
+  'Changing class immediately changes all learning access. Earlier-class history stays stored but is hidden from the student.': 'শ্রেণি বদলালেই বিষয়বস্তু দেখার অনুমতি বদলে যাবে। আগের শ্রেণির ইতিহাস সংরক্ষিত থাকবে, তবে শিক্ষার্থী দেখতে পাবে না।',
+  'Your enrolled class can only be changed by an administrator.': 'শুধু অ্যাডমিন আপনার নির্ধারিত শ্রেণি পরিবর্তন করতে পারবেন।',
+  'Choose your class before registering.': 'রেজিস্ট্রেশনের আগে আপনার শ্রেণি বেছে নিন।',
+
   'Bank questions': 'প্রশ্নভান্ডারের প্রশ্ন',
   'Practice arena': 'অনুশীলন কেন্দ্র', 'Subject contests': 'বিষয়ভিত্তিক প্রতিযোগিতা', 'Question bank': 'প্রশ্নভান্ডার', 'Manage contests': 'প্রতিযোগিতা পরিচালনা',
   'Practice question': 'প্রশ্ন অনুশীলন', 'Choose a subject, solve questions and learn from your mistakes.': 'বিষয় বেছে প্রশ্ন সমাধান করুন ও ভুল থেকে শিখুন।',

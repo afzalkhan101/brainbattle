@@ -171,7 +171,7 @@ export default function Register() {
               </div>
               <div>
                 <label className="label">{t("Class Level")}</label>
-                <select className="input" value={form.class_level} onChange={set('class_level')}>
+                <select aria-label={t("Class Level")} required={form.role === "student"} className="input" value={form.class_level} onChange={set('class_level')}>
                   {CLASS_LEVEL_OPTIONS.map(({
                   value,
                   label

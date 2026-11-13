@@ -69,3 +69,9 @@ Students → Subject contests: start once, answer questions (saved to the server
 Use the moon/sun button in the application header for dark/light mode, and the বাংলা/English button to switch the interface language. The controls also appear on login and registration pages. Preferences are saved per browser in `brainbattle.theme` and `brainbattle.language`, sync between tabs, and survive sign-out. The initial theme follows the system preference if no theme was saved. Changing either setting preserves unsaved form fields and quiz selections.
 
 Translations cover student and application-admin screens, dialogs, chart labels and common notifications. Names, email addresses and stored quiz questions/answers remain in their original language. Interface translations live in `frontend/src/i18n/bn.js`; `frontend/src/theme.css` defines the shared dark surfaces and existing utility overrides. No translation service or data submission is involved.
+
+## Class-specific access
+
+Student-facing subjects, quizzes, practice questions, contests, histories, progress counts and leaderboards are restricted on the server to the student's enrolled `class_level`. Filters only narrow this scope; guessed foreign IDs return 404. Anonymous users and students without a valid enrolled class cannot browse curriculum content. Unassigned quizzes are hidden from students. Admins retain access across classes.
+
+Students choose a class during registration, or complete it in Profile → Academic Info if their existing account has no class. After that, students cannot change/clear their own class. Admin → Students → Change student class handles corrections and promotions. Earlier-class history remains stored for admins but is excluded from the student's current-class views. Signing out/in or changing a query parameter cannot bypass the restriction.

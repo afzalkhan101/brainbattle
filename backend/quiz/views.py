@@ -1,11 +1,13 @@
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
-from rest_framework import generics, status, filters
+from rest_framework import generics, status, filters, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 
+from .access import class_scope, curriculum_admin
+from .admin_api import DashboardAdmin
 from .models import Subject, Quiz, Question, Answer, QuizAttempt, AttemptAnswer
 from .serializers import (
     SubjectSerializer,
@@ -20,13 +22,7 @@ from .serializers import (
 MARKS_MAP = {'hard': 3, 'mid': 2, 'simple': 1}
 
 def _is_privileged(user) -> bool:
-    return (
-        user.is_authenticated
-        and (
-            getattr(user, 'role', None) in ('teacher', 'admin')
-            or user.is_staff
-        )
-    )
+    return curriculum_admin(user)
 
 
 class IsTeacherOrAdmin(IsAuthenticated):
@@ -48,7 +44,7 @@ class SubjectListCreateView(generics.ListCreateAPIView):
     ordering_fields  = ['name', 'class_level']
 
     def get_queryset(self):
-        qs          = Subject.objects.all()
+        qs          = class_scope(Subject.objects.all(), self.request.user, 'class_level')
         class_level = self.request.query_params.get('class_level')
         if class_level:
             qs = qs.filter(class_level=class_level)
@@ -67,11 +63,12 @@ class SubjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     DELETE /subjects/<pk>/   → admin only
     """
     serializer_class = SubjectSerializer
-    queryset         = Subject.objects.all()
+    def get_queryset(self):
+        return class_scope(Subject.objects.all(), self.request.user, 'class_level')
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsAdminUser()]
+            return [DashboardAdmin()]
         if self.request.method in ('PUT', 'PATCH'):
             return [IsTeacherOrAdmin()]
         return [IsAuthenticatedOrReadOnly()]
@@ -122,9 +119,9 @@ class QuizListCreateView(generics.ListCreateAPIView):
         if class_level:
             qs = qs.filter(subject__class_level=class_level)
         if subject_id:
-            qs = qs.filter(subject_id=subject_id)
+            qs = qs.filter(subject_id=serializers.IntegerField(min_value=1).run_validation(subject_id))
 
-        return qs.distinct()
+        return class_scope(qs, user).distinct().order_by('-created_at', '-id')
 
     def get_serializer_class(self):
         return QuizCreateUpdateSerializer if self.request.method == 'POST' else QuizListSerializer
@@ -146,7 +143,7 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
 
     def get_queryset(self):
-        return Quiz.objects.select_related('subject').prefetch_related(
+        return class_scope(Quiz.objects.all(), self.request.user).select_related('subject').prefetch_related(
             Prefetch(
                 'questions',
                 queryset=Question.objects.prefetch_related('answers').order_by('order', 'id'),
@@ -168,7 +165,7 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsAdminUser()]
+            return [DashboardAdmin()]
         if self.request.method in ('PUT', 'PATCH'):
             return [IsTeacherOrAdmin()]
         return [IsAuthenticatedOrReadOnly()]
@@ -188,7 +185,7 @@ class QuizSubmitView(APIView):
     def post(self, request, pk):
         try:
             quiz = (
-                Quiz.objects
+                class_scope(Quiz.objects.all(), request.user)
                 .prefetch_related('questions__answers')
                 .get(pk=pk, is_published=True)
             )
@@ -220,10 +217,15 @@ class QuizSubmitView(APIView):
         serializer = QuizSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        submitted = {
-            item['question_id']: item.get('answer_id')
-            for item in serializer.validated_data['answers']
-        }
+        questions = {question.pk: question for question in quiz.questions.all()}
+        submitted = {}
+        for item in serializer.validated_data['answers']:
+            question_id, answer_id = item['question_id'], item.get('answer_id')
+            if question_id not in questions or question_id in submitted:
+                raise serializers.ValidationError('Submit each question from this quiz at most once.')
+            if answer_id is not None and answer_id not in {answer.pk for answer in questions[question_id].answers.all()}:
+                raise serializers.ValidationError('Choose an answer belonging to this question.')
+            submitted[question_id] = answer_id
 
         total_marks    = 0
         obtained_marks = 0
@@ -290,7 +292,7 @@ class MyAttemptsView(generics.ListAPIView):
         class_level = self.request.query_params.get('class_level')
         if class_level:
             qs = qs.filter(quiz__subject__class_level=class_level)
-        return qs
+        return class_scope(qs, self.request.user, 'quiz__subject__class_level')
 
 
 class AttemptDetailView(generics.RetrieveAPIView):
@@ -301,7 +303,7 @@ class AttemptDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         from .learning import reserved_questions
         return (
-            QuizAttempt.objects
+            class_scope(QuizAttempt.objects.all(), self.request.user, 'quiz__subject__class_level')
             .filter(user=self.request.user)
             .exclude(quiz__questions__bank_copy__pk__in=reserved_questions())
             .select_related('quiz', 'quiz__subject')

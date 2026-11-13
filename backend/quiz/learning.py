@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .admin_api import DashboardAdmin
+from .access import class_scope
 from .models import (Answer, BankQuestion, Contest, ContestEntry, ContestQuestion,
                      PracticeAttempt, Question, Subject)
 from .progress import build_progress
@@ -33,7 +34,7 @@ def reserved_questions():
 
 def practice_questions(user):
     attempts = PracticeAttempt.objects.filter(user=user, question_id=OuterRef('pk'))
-    return BankQuestion.objects.filter(is_active=True).exclude(pk__in=reserved_questions()).select_related('subject').annotate(
+    return class_scope(BankQuestion.objects.all(), user).filter(is_active=True).exclude(pk__in=reserved_questions()).select_related('subject').annotate(
         solved=Exists(attempts.filter(is_correct=True)), attempted=Exists(attempts))
 
 
@@ -193,7 +194,7 @@ class PracticeSubmit(APIView):
         params = Input(data=request.data)
         params.is_valid(raise_exception=True)
         data = params.validated_data
-        previous = PracticeAttempt.objects.filter(user=request.user, request_id=data['request_id']).first()
+        previous = class_scope(PracticeAttempt.objects.all(), request.user, 'question__subject__class_level').filter(user=request.user, request_id=data['request_id']).first()
         if previous:
             if previous.question_id != pk or previous.selected_index != data['selected_index']:
                 raise ValidationError('This submission identifier has already been used.')
@@ -214,7 +215,7 @@ def practice_stats(user, now):
     tz = ZoneInfo('Asia/Dhaka')
     today = now.astimezone(tz).date()
     start = datetime.combine(today, time.min, tzinfo=tz)
-    attempts = PracticeAttempt.objects.filter(user=user)
+    attempts = class_scope(PracticeAttempt.objects.all(), user, 'question__subject__class_level').filter(user=user)
     counts = attempts.aggregate(total=Count('id'), correct=Count('id', filter=Q(is_correct=True)))
     days = set(attempts.annotate(day=TruncDate('submitted_at', tzinfo=tz)).values_list('day', flat=True).distinct())
     cursor = today if today in days else today - timedelta(days=1)
@@ -231,7 +232,7 @@ class PracticeSummary(APIView):
 
     def get(self, request):
         stats = practice_stats(request.user, timezone.now())
-        subjects = Subject.objects.annotate(question_count=Count('bank_questions', filter=Q(bank_questions__is_active=True))).filter(question_count__gt=0)
+        subjects = class_scope(Subject.objects.all(), request.user, 'class_level').annotate(question_count=Count('bank_questions', filter=Q(bank_questions__is_active=True))).filter(question_count__gt=0)
         return Response({**stats, 'available': practice_questions(request.user).count(),
                          'subjects': [{'id': s.pk, 'name': s.name, 'class_level': s.get_class_level_display(), 'count': s.question_count} for s in subjects]})
 
@@ -329,7 +330,11 @@ class PublicContestSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source='subject.name', read_only=True)
     status = serializers.CharField(read_only=True)
     question_count = serializers.IntegerField(source='items.count', read_only=True)
-    participant_count = serializers.IntegerField(source='entries.count', read_only=True)
+    participant_count = serializers.SerializerMethodField()
+
+    def get_participant_count(self, obj):
+        request = self.context.get('request')
+        return class_scope(obj.entries.all(), request.user, 'user__class_level').count() if request else 0
 
     class Meta:
         model = Contest
@@ -343,7 +348,7 @@ class Contests(generics.ListAPIView):
     search_fields = ['title', 'subject__name']
 
     def get_queryset(self):
-        qs = Contest.objects.filter(is_published=True).select_related('subject').prefetch_related('items')
+        qs = class_scope(Contest.objects.all(), self.request.user).filter(is_published=True).select_related('subject').prefetch_related('items')
         params = QuestionFilters(data={k: v for k, v in self.request.query_params.items() if k == 'subject' and v})
         params.is_valid(raise_exception=True)
         if 'subject' in params.validated_data:
@@ -351,8 +356,8 @@ class Contests(generics.ListAPIView):
         return qs
 
 
-def public_contest(pk):
-    return get_object_or_404(Contest.objects.select_related('subject'), pk=pk, is_published=True)
+def public_contest(pk, user):
+    return get_object_or_404(class_scope(Contest.objects.all(), user).select_related('subject'), pk=pk, is_published=True)
 
 
 def finish_entry(entry, now, force=False):
@@ -386,12 +391,12 @@ class ContestDetail(APIView):
 
     @transaction.atomic
     def get(self, request, pk):
-        contest = public_contest(pk)
+        contest = public_contest(pk, request.user)
         now = timezone.now()
         entry = ContestEntry.objects.select_for_update().filter(contest=contest, user=request.user).first()
         if entry:
             finish_entry(entry, now)
-        result = PublicContestSerializer(contest).data
+        result = PublicContestSerializer(contest, context={'request': request}).data
         result['server_time'] = now
         result['entry'] = entry_payload(entry, now) if entry else None
         result['questions'] = []
@@ -409,7 +414,7 @@ class ContestStart(APIView):
 
     @transaction.atomic
     def post(self, request, pk):
-        contest = get_object_or_404(Contest.objects.select_for_update(), pk=pk, is_published=True)
+        contest = get_object_or_404(class_scope(Contest.objects.all(), request.user).select_for_update(), pk=pk, is_published=True)
         now = timezone.now()
         if not contest.starts_at <= now < contest.ends_at:
             raise ValidationError('The contest is not live.')
@@ -424,7 +429,7 @@ class ContestSave(APIView):
 
     @transaction.atomic
     def patch(self, request, pk):
-        contest = public_contest(pk)
+        contest = public_contest(pk, request.user)
         entry = get_object_or_404(ContestEntry.objects.select_for_update(), contest=contest, user=request.user)
         now = timezone.now()
         if not entry.submitted_at and now < entry.deadline:
@@ -446,7 +451,7 @@ class ContestSubmit(APIView):
 
     @transaction.atomic
     def post(self, request, pk):
-        contest = public_contest(pk)
+        contest = public_contest(pk, request.user)
         entry = get_object_or_404(ContestEntry.objects.select_for_update(), contest=contest, user=request.user)
         finish_entry(entry, timezone.now(), force=True)
         return Response({'entry': entry_payload(entry, timezone.now()), 'server_time': timezone.now()})
@@ -468,11 +473,11 @@ class Leaderboard(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        contest = public_contest(pk)
+        contest = public_contest(pk, request.user)
         if timezone.now() < contest.ends_at:
             raise PermissionDenied('Results and rankings are released after the contest ends.')
         finalize_expired(contest=contest)
-        entries = ContestEntry.objects.filter(contest=contest, submitted_at__isnull=False).select_related('user').order_by('-score', 'elapsed_seconds', 'submitted_at', 'pk')
+        entries = class_scope(ContestEntry.objects.all(), request.user, 'user__class_level').filter(contest=contest, submitted_at__isnull=False).select_related('user').order_by('-score', 'elapsed_seconds', 'submitted_at', 'pk')
         from rest_framework.pagination import PageNumberPagination
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(entries, request)
@@ -493,7 +498,7 @@ class LearningProgress(APIView):
             raise ValidationError({'period': 'Choose 7, 30 or all.'})
         finalize_expired(user=request.user)
         now = timezone.now()
-        entries = ContestEntry.objects.filter(user=request.user, submitted_at__isnull=False, contest__ends_at__lte=now,
+        entries = class_scope(ContestEntry.objects.all(), request.user, 'contest__subject__class_level').filter(user=request.user, submitted_at__isnull=False, contest__ends_at__lte=now,
                     contest__is_published=True).select_related('contest').order_by('contest__ends_at', 'contest_id')
         attempts = [{'submitted_at': e.contest.ends_at, 'score': e.score, 'total_marks': e.total_marks} for e in entries]
         data = build_progress(attempts, now, ZoneInfo('Asia/Dhaka'), period)

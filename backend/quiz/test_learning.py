@@ -15,8 +15,8 @@ class LearningTests(APITestCase):
     def setUp(self):
         User = get_user_model()
         self.admin = User.objects.create_user('admin@example.com', role='admin')
-        self.student = User.objects.create_user('student@example.com', role='student')
-        self.other = User.objects.create_user('other@example.com', role='student')
+        self.student = User.objects.create_user('student@example.com', role='student', class_level='hsc')
+        self.other = User.objects.create_user('other@example.com', role='student', class_level='hsc')
         self.subject = Subject.objects.create(name='Physics', slug='physics', class_level='hsc')
         self.other_subject = Subject.objects.create(name='English', slug='english', class_level='hsc')
         self.question = BankQuestion.objects.create(subject=self.subject, question_text='SI unit of force?', options=['Newton', 'Joule'], correct_index=0, explanation='Force is measured in newtons.', difficulty='mid')

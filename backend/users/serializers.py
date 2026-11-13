@@ -22,6 +22,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password",
             "password_confirm",
             "referred_by_code",
+            "class_level",
         ]
 
     def validate_role(self, value):
@@ -32,6 +33,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        if attrs.get('role', User.Role.STUDENT) == User.Role.STUDENT and not attrs.get('class_level'):
+            raise serializers.ValidationError({'class_level': 'Choose your class before registering.'})
         if attrs["password"] != attrs.pop("password_confirm"):
             raise serializers.ValidationError({"password": "Passwords do not match."})
         return attrs
@@ -156,6 +159,13 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "exam_year",
             # ──────────────────────────────────
         ]
+
+    def validate_class_level(self, value):
+        if self.instance and self.instance.role == User.Role.STUDENT and not self.instance.is_superuser:
+            current = self.instance.class_level
+            if current and value != current:
+                raise serializers.ValidationError('Your enrolled class can only be changed by an administrator.')
+        return value
 
     def validate_profile_image(self, value):
         if value is None:

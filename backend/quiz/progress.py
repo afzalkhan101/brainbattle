@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import QuizAttempt
+from .access import class_scope
 
 LEVELS = [
     {'name': 'Newbie', 'minimum': 0, 'maximum': 1199, 'color': 'slate'},
@@ -110,5 +111,5 @@ class StudentProgressView(APIView):
             tz = ZoneInfo(request.query_params.get('timezone', 'Asia/Dhaka'))
         except (ZoneInfoNotFoundError, ValueError):
             raise serializers.ValidationError({'timezone': 'Choose a valid IANA time zone.'})
-        attempts = QuizAttempt.objects.filter(user=request.user).order_by('submitted_at', 'pk').values('submitted_at', 'score', 'total_marks')
+        attempts = class_scope(QuizAttempt.objects.all(), request.user, 'quiz__subject__class_level').filter(user=request.user).order_by('submitted_at', 'pk').values('submitted_at', 'score', 'total_marks')
         return Response(build_progress(attempts, timezone.now(), tz, period))

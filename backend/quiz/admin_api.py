@@ -143,6 +143,20 @@ class AdminStudents(generics.ListAPIView):
         return qs.filter(class_level=level) if level else qs
 
 
+class StudentClassSerializer(serializers.ModelSerializer):
+    class_level = serializers.ChoiceField(choices=get_user_model().ClassLevel.choices)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['class_level']
+
+
+class AdminStudentClass(generics.UpdateAPIView):
+    permission_classes = [DashboardAdmin]
+    serializer_class = StudentClassSerializer
+    queryset = get_user_model().objects.filter(role='student')
+
+
 class AdminResults(generics.ListAPIView):
     permission_classes = [DashboardAdmin]
     serializer_class = QuizAttemptSerializer
@@ -178,6 +192,7 @@ urlpatterns = [
     path('quizzes/', AdminQuizList.as_view()),
     path('quizzes/<int:pk>/', AdminQuizDetail.as_view()),
     path('students/', AdminStudents.as_view()),
+    path('students/<int:pk>/class/', AdminStudentClass.as_view()),
     path('results/', AdminResults.as_view()),
     path('subjects/', AdminSubjects.as_view()),
 ]
