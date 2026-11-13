@@ -38,7 +38,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <PublicPreferences />
-        <Toaster position="top-right" toastOptions={{ style: { fontSize: '14px', borderRadius: '12px', background: theme === 'dark' ? '#0f172a' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a' } }} />
+        <Toaster position="top-right" toastOptions={{ style: { fontSize: '14px', borderRadius: '12px', background: theme === 'dark' ? '#0a0a0a' : '#ffffff', color: theme === 'dark' ? '#e5e5e5' : '#0f172a' } }} />
         <Routes>
           <Route path="/practice" element={<PrivateRoute><Layout><Practice /></Layout></PrivateRoute>} />
           <Route path="/contests" element={<PrivateRoute><Layout><Contests /></Layout></PrivateRoute>} />

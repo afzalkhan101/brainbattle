@@ -30,10 +30,10 @@ export default function ProgressChart({
     theme
   } = usePreferences();
   const colors = theme === 'dark' ? {
-    slate: ['#182236', '#94a3b8'],
-    green: ['#092d29', '#6ee7b7'],
-    cyan: ['#0c293b', '#67e8f9'],
-    blue: ['#132748', '#93c5fd']
+    slate: ['#080808', '#a3a3a3'],
+    green: ['#101010', '#6ee7b7'],
+    cyan: ['#161616', '#67e8f9'],
+    blue: ['#1c1c1c', '#93c5fd']
   } : bandColors;
   const ratings = progress.timeline.map(point => point.rating);
   const bottom = Math.max(0, Math.floor((Math.min(...ratings) - 50) / 200) * 200);
