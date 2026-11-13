@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 
 urlpatterns = [
+    path('api/learning/', include('quiz.learning')),
     path('api/admin/', include('quiz.admin_api')),
     path('admin/', admin.site.urls),
 

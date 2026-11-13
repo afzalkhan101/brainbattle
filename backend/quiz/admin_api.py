@@ -8,7 +8,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Answer, Question, Quiz, QuizAttempt, Subject
+from .models import Answer, Question, Quiz, QuizAttempt, Subject, BankQuestion, Contest
 from .serializers import QuizAttemptSerializer, SubjectSerializer
 
 
@@ -167,7 +167,7 @@ class AdminOverview(APIView):
                        detail=q.title, at=q.updated_at) for q in quizzes.order_by('-updated_at')[:5]]
         events += [dict(id=f's{s.pk}', title='New student joined', detail=s.full_name or s.email,
                         at=s.date_joined) for s in students.order_by('-date_joined')[:5]]
-        return Response(dict(students=students.count(), quizzes=quizzes.count(),
+        return Response(dict(bank_questions=BankQuestion.objects.count(), contests=Contest.objects.count(), students=students.count(), quizzes=quizzes.count(),
                              published=quizzes.filter(is_published=True).count(),
                              attempts=QuizAttempt.objects.count(),
                              activity=sorted(events, key=lambda e: e['at'], reverse=True)[:5]))

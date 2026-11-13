@@ -98,6 +98,8 @@ class QuizListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         
         if not _is_privileged(user):
+            from .learning import reserved_questions
+            qs = qs.exclude(questions__bank_copy__pk__in=reserved_questions())
             qs = qs.filter(
                 Q(is_published=True, scheduled_at__isnull=True)
                 | Q(is_published=True, scheduled_at__lte=timezone.now())
@@ -153,8 +155,10 @@ class QuizDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         obj = super().get_object()
-        if not _is_privileged(self.request.user) and not obj.is_live:
-            raise NotFound('Quiz not found or not yet available.')
+        if not _is_privileged(self.request.user):
+            from .learning import reserved_questions
+            if not obj.is_live or obj.questions.filter(bank_copy__pk__in=reserved_questions()).exists():
+                raise NotFound('Quiz not found or not yet available.')
         return obj
 
     def get_serializer_class(self):
@@ -191,6 +195,10 @@ class QuizSubmitView(APIView):
         except Quiz.DoesNotExist:
             raise NotFound('Quiz not found.')
         
+        from .learning import reserved_questions
+        if quiz.questions.filter(bank_copy__pk__in=reserved_questions()).exists():
+            return Response({'detail': 'Some questions are reserved for a live contest.'}, status=status.HTTP_403_FORBIDDEN)
+
         if not quiz.is_live:
             return Response(
                 {
@@ -291,9 +299,11 @@ class AttemptDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        from .learning import reserved_questions
         return (
             QuizAttempt.objects
             .filter(user=self.request.user)
+            .exclude(quiz__questions__bank_copy__pk__in=reserved_questions())
             .select_related('quiz', 'quiz__subject')
             .prefetch_related(
                 Prefetch(

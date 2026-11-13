@@ -1,3 +1,4 @@
+import { clearAuthTokens } from '../context/authStorage'
 import axios from 'axios'
 
 const api = axios.create({
@@ -26,7 +27,7 @@ api.interceptors.response.use(
           original.headers.Authorization = `Bearer ${data.access}`
           return api(original)
         } catch {
-          localStorage.clear()
+          clearAuthTokens()
           window.location.href = '/login'
         }
       }

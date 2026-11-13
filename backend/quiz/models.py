@@ -166,3 +166,93 @@ class AttemptAnswer(models.Model):
     def __str__(self):
         state = 'correct' if self.is_correct else 'wrong'
         return f'{self.attempt} | Q{self.question.id} | {state} | {self.marks_obtained}/{self.marks_possible}'
+
+class BankQuestion(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.PROTECT, related_name='bank_questions')
+    chapter = models.CharField(max_length=150, blank=True, db_index=True)
+    question_text = models.TextField()
+    options = models.JSONField(default=list)
+    correct_index = models.PositiveSmallIntegerField()
+    explanation = models.TextField(blank=True)
+    difficulty = models.CharField(max_length=10, choices=Question.DIFFICULTY_CHOICES, default='simple')
+    is_active = models.BooleanField(default=True)
+    source_question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True, blank=True, related_name='bank_copy')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['id']
+        indexes = [models.Index(fields=['subject', 'is_active', 'difficulty'])]
+
+    def snapshot(self):
+        return {key: getattr(self, key) for key in ['question_text', 'options', 'correct_index', 'explanation', 'difficulty']}
+
+
+class PracticeAttempt(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='practice_attempts')
+    question = models.ForeignKey(BankQuestion, on_delete=models.PROTECT, related_name='practice_attempts')
+    request_id = models.UUIDField()
+    selected_index = models.PositiveSmallIntegerField()
+    is_correct = models.BooleanField()
+    question_snapshot = models.JSONField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-submitted_at', '-id']
+        constraints = [models.UniqueConstraint(fields=['user', 'request_id'], name='unique_practice_request')]
+        indexes = [models.Index(fields=['user', 'question', 'is_correct'])]
+
+
+class Contest(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.PROTECT, related_name='contests')
+    kind = models.CharField(max_length=10, choices=[('weekly', 'Weekly'), ('monthly', 'Monthly')], default='weekly')
+    starts_at = models.DateTimeField(db_index=True)
+    ends_at = models.DateTimeField(db_index=True)
+    duration_minutes = models.PositiveIntegerField(default=30)
+    is_published = models.BooleanField(default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-starts_at', '-id']
+        constraints = [models.CheckConstraint(condition=models.Q(ends_at__gt=models.F('starts_at')), name='contest_valid_window')]
+
+    @property
+    def status(self):
+        if not self.is_published:
+            return 'draft'
+        if timezone.now() < self.starts_at:
+            return 'upcoming'
+        return 'ended' if timezone.now() >= self.ends_at else 'live'
+
+
+class ContestQuestion(models.Model):
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='items')
+    question = models.ForeignKey(BankQuestion, on_delete=models.PROTECT, related_name='contest_items')
+    order = models.PositiveIntegerField()
+    snapshot = models.JSONField()
+
+    class Meta:
+        ordering = ['order', 'id']
+        constraints = [models.UniqueConstraint(fields=['contest', 'question'], name='unique_contest_question'),
+                       models.UniqueConstraint(fields=['contest', 'order'], name='unique_contest_order')]
+
+
+class ContestEntry(models.Model):
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='entries')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contest_entries')
+    started_at = models.DateTimeField()
+    deadline = models.DateTimeField(db_index=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    answers = models.JSONField(default=dict)
+    score = models.PositiveIntegerField(default=0)
+    total_marks = models.PositiveIntegerField(default=0)
+    correct_answers = models.PositiveIntegerField(default=0)
+    elapsed_seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['contest', 'user'], name='unique_contest_participant')]
+        indexes = [models.Index(fields=['contest', '-score', 'elapsed_seconds'])]

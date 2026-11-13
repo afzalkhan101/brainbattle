@@ -44,6 +44,28 @@ Demo student login: `student01@demo.brainbattle.test`, password `DemoStudent!202
 
 ## Student progress
 
-Student dashboard progress is computed from the signed-in user's saved quiz attempts via `/api/quizzes/progress/?period=7` (`30` and `all` are also supported). It includes a rating curve, average quiz percentages for today/yesterday, completed quizzes, practice streak, and level progress. It uses Asia/Dhaka dates, with no synthetic results for new students. The seven- and thirty-day ranges carry earlier rating forward; all-time keeps every active date and range endpoints on a true time axis.
+The student dashboard uses `/api/learning/progress/?period=7` (`30` and `all` are supported). Competitive rating uses only submitted entries in contests whose end time has passed. Old quizzes and daily practice do not change it; old quiz history remains in My Attempts. Practice has separate solved counts, accuracy, today's attempts and a daily streak, using Asia/Dhaka dates.
 
-Rating starts at 1,000. Each quiz adds `round(2 × score_percentage − 100)` points, using half-up rounding and a floor of zero. An 80% score adds 60; a 40% score subtracts 20. Newbie: 0–1,199; Pupil: 1,200–1,399; Specialist: 1,400–1,599; Expert: 1,600+. Inactive days do not change rating. A streak stays active through today if the student practised yesterday. Daily averages are the mean of individual quiz percentages; comparisons are in percentage points. Days without quizzes have no average, rather than a zero score. Rating is recalculated if an attempt is deleted.
+Rating starts at 1,000. Each finished contest adds `round(2 × score_percentage − 100)`, with half-up rounding and a floor of zero. An 80% score adds 60; a 40% score subtracts 20. Newbie: 0–1,199; Pupil: 1,200–1,399; Specialist: 1,400–1,599; Expert: 1,600+. The graph uses contest end dates. The earlier `/api/quizzes/progress/` endpoint remains available for legacy quiz-only analytics.
+
+## Question bank and practice
+
+Admin → Question bank supports adding/editing questions, explanations, chapters, difficulty and retirement. A migration copies valid subject-assigned legacy quiz questions into the bank without modifying the original quiz. Published quiz copies are active; draft quiz copies are inactive. The Import an existing quiz action can copy questions added later and skips existing copies.
+
+Use JSON template to download the import format. JSON files support 1–2,000 questions and up to 10 MB per request. Each row has `subject` (an existing subject ID), `chapter`, `question_text`, `options` (2–6 strings), `correct_index` (zero-based), `explanation`, `difficulty` (`simple`, `mid`, `hard`), and `is_active`. The entire import is validated and saved atomically. A repeated JSON import creates additional questions; it does not deduplicate by text.
+
+Students → Practice arena provides subject/chapter/difficulty filters, search, pagination, solved/unsolved/wrong filters, answer feedback and explanations. Practice submissions are idempotent using a request UUID. Historical feedback stores a snapshot so later edits do not change it. Questions in currently live contests are temporarily unavailable for practice.
+
+## Weekly and monthly contests
+
+Admin → Manage contests → Create contest: choose a subject, weekly/monthly type, start/end dates, per-student duration and 1–200 bank questions, then publish. Weekly/monthly are labels for manually scheduled events; they do not create recurring contests automatically. Dates are entered in the browser's local time. The per-student deadline is the earlier of start + duration or the contest end.
+
+Every selected question is snapshotted with its choices, answer and explanation. Every participant sees the same questions/order. A started contest or a contest with participants cannot be edited/deleted. A bank question can still be edited or retired without affecting existing contest snapshots.
+
+Students → Subject contests: start once, answer questions (saved to the server), resume after reload, and submit. The server enforces the deadline; late answer changes are discarded. Scores and answer explanations unlock only after the overall contest ends. Abandoned entries are finalized from saved answers when entry/results/progress are read, so no background scheduler is required. Do not close a tab while answers are still saving. After the end, the paginated leaderboard ranks score descending, then elapsed seconds ascending; equal score/time shares rank. Questions use 1/2/3 marks for simple/medium/hard, no negative marks, and unanswered questions earn zero.
+
+## Display preferences
+
+Use the moon/sun button in the application header for dark/light mode, and the বাংলা/English button to switch the interface language. The controls also appear on login and registration pages. Preferences are saved per browser in `brainbattle.theme` and `brainbattle.language`, sync between tabs, and survive sign-out. The initial theme follows the system preference if no theme was saved. Changing either setting preserves unsaved form fields and quiz selections.
+
+Translations cover student and application-admin screens, dialogs, chart labels and common notifications. Names, email addresses and stored quiz questions/answers remain in their original language. Interface translations live in `frontend/src/i18n/bn.js`; `frontend/src/theme.css` defines the shared dark surfaces and existing utility overrides. No translation service or data submission is involved.

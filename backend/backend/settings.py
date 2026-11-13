@@ -160,6 +160,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Atomic JSON question-bank imports (up to 2,000 questions per file).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 
 # ============================================================
 # Static Files

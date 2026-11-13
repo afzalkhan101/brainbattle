@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduPortal</title>
+    <title>Brain Battle</title>
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('brainbattle.theme');
+        const dark = savedTheme ? savedTheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        document.documentElement.lang = localStorage.getItem('brainbattle.language') === 'bn' ? 'bn' : 'en';
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

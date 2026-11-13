@@ -1,3 +1,4 @@
+import { clearAuthTokens } from './authStorage'
 import { createContext, useContext, useState, useEffect } from 'react'
 import api from '../api/axios'
 
@@ -12,7 +13,7 @@ export function AuthProvider({ children }) {
     if (token) {
       api.get('/api/auth/profile/')
         .then(({ data }) => setUser(data))
-        .catch(() => localStorage.clear())
+        .catch(() => clearAuthTokens())
         .finally(() => setLoading(false))
     } else {
       setLoading(false)
@@ -38,7 +39,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     const refresh = localStorage.getItem('refresh_token')
     try { await api.post('/api/auth/logout/', { refresh }) } catch {}
-    localStorage.clear()
+    clearAuthTokens()
     setUser(null)
   }
 
